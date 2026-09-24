@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Analisis Olahraga — Realtime</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header class="main-header">
+        <h1>🎯 Sistem Analisis Olahraga — Realtime</h1>
+    </header>
+
+    <!-- NAVIGATION TABS -->
+    <nav class="tab-nav">
+        <button class="tab-btn active" data-tab="tab1">1. Analisis Parlay + O/U</button>
+        <button class="tab-btn" data-tab="tab2">2. Kumpulan Tim Favorit</button>
+        <button class="tab-btn" data-tab="tab3">3. Sketsa Bil</button>
+        <button class="tab-btn" data-tab="tab4">4. Room Diskusi</button>
+        <button class="tab-btn" data-tab="tab5">5. Serba Serbi</button>
+    </nav>
+
+    <!-- ==================== TAB 1: ANALISIS PARLAY + O/U ==================== -->
+    <section id="tab1" class="tab-content active">
+        <div class="card">
+            <h2>1. Analisis Parlay + Rekomendasi Over/Under (Dapat Disesuaikan)</h2>
+
+            <div id="matches-container">
+                <!-- Matches will be dynamically added here -->
+            </div>
+
+            <div class="button-group center">
+                <button class="btn btn-green" id="btn-add-match"> Tambah Pertandingan</button>
+                <button class="btn btn-green" id="btn-remove-match"> Hapus Pertandingan</button>
+            </div>
+
+            <div class="card card-parlay">
+                <h3>Odds Parlay dari Bandar</h3>
+                <input type="number" id="parlay-odds" value="30.00" step="0.01" min="0">
+                <p class="hint">Masukkan odds akumulasi jika ingin analisis parlay (opsional)</p>
+                <button class="btn btn-green" id="btn-fair-odds">👁 Lihat Odds Adil per Laga</button>
+            </div>
+
+            <div class="button-group center">
+                <button class="btn btn-blue" id="btn-calculate">📊 Hitung Analisis, Parlay & EV</button>
+            </div>
+
+            <div id="results-container" class="results-container"></div>
+
+            <div class="button-group center" style="margin-top:15px;">
+                <button class="btn btn-blue" id="btn-save-data">💾 Simpan Data Pertandingan</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== TAB 2: KUMPULAN TIM FAVORIT ==================== -->
+    <section id="tab2" class="tab-content">
+        <div class="card">
+            <h2>2. Kumpulan Tim Favorit</h2>
+            <p class="hint">Tambahkan tim favorit Anda untuk analisis khusus</p>
+
+            <div class="form-row">
+                <input type="text" id="fav-team-name" placeholder="Nama Tim">
+                <input type="text" id="fav-team-league" placeholder="Liga / Kompetisi">
+                <input type="number" id="fav-team-rating" placeholder="Rating (1-10)" min="1" max="10">
+                <button class="btn btn-green" id="btn-add-fav">➕ Tambah Tim</button>
+            </div>
+
+            <div id="fav-table-container">
+                <table class="data-table" id="fav-table">
+                    <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>Nama Tim</th>
+                            <th>Liga</th>
+                            <th>Rating</th>
+                            <th>Menang</th>
+                            <th>Seri</th>
+                            <th>Kalah</th>
+                            <th>Win Rate</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fav-tbody"></tbody>
+                </table>
+            </div>
+
+            <div class="button-group center" style="margin-top:15px;">
+                <button class="btn btn-blue" id="btn-analyze-fav">📊 Analisis Tim Favorit</button>
+            </div>
+            <div id="fav-results" class="results-container"></div>
+        </div>
+    </section>
+
+    <!-- ==================== TAB 3: SKETSA BIL ==================== -->
+    <section id="tab3" class="tab-content">
+        <div class="card">
+            <h2>3. Sketsa Bil (Prediksi Skor)</h2>
+            <p class="hint">Masukkan data pertandingan untuk memprediksi skor</p>
+
+            <div class="form-row">
+                <input type="text" id="sketsa-team-a" placeholder="Tim A">
+                <input type="number" id="sketsa-goals-a" placeholder="Gol Tim A (avg)" min="0" step="0.1">
+                <input type="text" id="sketsa-team-b" placeholder="Tim B">
+                <input type="number" id="sketsa-goals-b" placeholder="Gol Tim B (avg)" min="0" step="0.1">
+                <button class="btn btn-green" id="btn-predict-score">🔮 Prediksi Skor</button>
+            </div>
+
+            <div id="sketsa-results" class="results-container"></div>
+
+            <div class="card card-parlay" style="margin-top:20px;">
+                <h3>📋 Riwayat Prediksi</h3>
+                <table class="data-table" id="sketsa-history-table">
+                    <thead>
+                        <tr>
+                            <th>Tanggal</th>
+                            <th>Tim A</th>
+                            <th>Tim B</th>
+                            <th>Prediksi A</th>
+                            <th>Prediksi B</th>
+                            <th>Confidence</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sketsa-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== TAB 4: ROOM DISKUSI ==================== -->
+    <section id="tab4" class="tab-content">
+        <div class="card">
+            <h2>4. Room Diskusi</h2>
+            <p class="hint">Diskusikan prediksi dan analisis dengan pengguna lain</p>
+
+            <div class="form-row">
+                <input type="text" id="discuss-name" placeholder="Nama Anda">
+                <input type="text" id="discuss-topic" placeholder="Topik Diskusi">
+            </div>
+            <div class="form-row">
+                <textarea id="discuss-message" placeholder="Tulis pesan diskusi..." rows="3"></textarea>
+            </div>
+            <div class="button-group center">
+                <button class="btn btn-green" id="btn-send-discuss">📤 Kirim Pesan</button>
+                <button class="btn btn-blue" id="btn-clear-discuss">🗑 Hapus Semua</button>
+            </div>
+
+            <div id="discussion-container" class="discussion-container"></div>
+        </div>
+    </section>
+
+    <!-- ==================== TAB 5: SERBA SERBI ==================== -->
+    <section id="tab5" class="tab-content">
+        <div class="card">
+            <h2>5. Serba Serbi</h2>
+            <p class="hint">Informasi tambahan, statistik, dan utilitas</p>
+
+            <div class="serba-grid">
+                <div class="serba-card">
+                    <h3>📈 Statistik Sistem</h3>
+                    <div id="system-stats">
+                        <p>Total Pertandingan: <strong id="stat-matches">0</strong></p>
+                        <p>Total Tim Favorit: <strong id="stat-fav">0</strong></p>
+                        <p>Total Prediksi Skor: <strong id="stat-sketsa">0</strong></p>
+                        <p>Total Diskusi: <strong id="stat-discuss">0</strong></p>
+                    </div>
+                </div>
+
+                <div class="serba-card">
+                    <h3> Kalkulator Odds</h3>
+                    <div class="form-row">
+                        <input type="number" id="calc-stake" placeholder="Stake (Rp)" min="0">
+                        <input type="number" id="calc-odds" placeholder="Odds" min="0" step="0.01">
+                        <button class="btn btn-green" id="btn-calc-odds">Hitung</button>
+                    </div>
+                    <div id="calc-results"></div>
+                </div>
+
+                <div class="serba-card">
+                    <h3>📊 Konversi Odds</h3>
+                    <div class="form-row">
+                        <input type="number" id="convert-odds" placeholder="Masukkan Odds Decimal" min="1" step="0.01">
+                        <button class="btn btn-green" id="btn-convert">Konversi</button>
+                    </div>
+                    <div id="convert-results"></div>
+                </div>
+
+                <div class="serba-card">
+                    <h3>️ Panduan Penggunaan</h3>
+                    <ul>
+                        <li><strong>Tab 1:</strong> Input data pertandingan, hitung parlay & Expected Value</li>
+                        <li><strong>Tab 2:</strong> Kelola tim favorit dan analisis performa</li>
+                        <li><strong>Tab 3:</strong> Prediksi skor menggunakan distribusi Poisson</li>
+                        <li><strong>Tab 4:</strong> Room diskusi untuk berbagi analisis</li>
+                        <li><strong>Tab 5:</strong> Kalkulator odds dan statistik sistem</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="main-footer">
+        <p>Sistem Analisis Olahraga — Realtime &copy; 2026 | Dibuat untuk tujuan analisis & edukasi</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
