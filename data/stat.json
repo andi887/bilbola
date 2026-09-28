@@ -1,0 +1,162 @@
+{
+  "Alaves": {
+    "elo": 1620,
+    "form": [
+      "L",
+      "D",
+      "W",
+      "L",
+      "D"
+    ],
+    "golRata": 1.0,
+    "kebobolanRata": 1.4,
+    "liga": "La Liga",
+    "winRate": 35
+  },
+  "Arsenal": {
+    "elo": 1820,
+    "form": [
+      "W",
+      "W",
+      "D",
+      "W",
+      "L"
+    ],
+    "golRata": 1.8,
+    "kebobolanRata": 0.9,
+    "liga": "Premier League",
+    "winRate": 60
+  },
+  "Aston Villa": {
+    "elo": 1750,
+    "form": [
+      "W",
+      "L",
+      "W",
+      "D",
+      "W"
+    ],
+    "golRata": 1.5,
+    "kebobolanRata": 1.1,
+    "liga": "Premier League",
+    "winRate": 50
+  },
+  "Barcelona": {
+    "elo": 1890,
+    "form": [
+      "W",
+      "W",
+      "D",
+      "W",
+      "W"
+    ],
+    "golRata": 2.1,
+    "kebobolanRata": 0.9,
+    "liga": "La Liga",
+    "winRate": 70
+  },
+  "Inter Milan": {
+    "elo": 1840,
+    "form": [
+      "W",
+      "W",
+      "L",
+      "W",
+      "W"
+    ],
+    "golRata": 1.9,
+    "kebobolanRata": 0.9,
+    "liga": "Serie A",
+    "winRate": 65
+  },
+  "Juventus": {
+    "elo": 1780,
+    "form": [
+      "W",
+      "D",
+      "W",
+      "D",
+      "W"
+    ],
+    "golRata": 1.6,
+    "kebobolanRata": 1.0,
+    "liga": "Serie A",
+    "winRate": 55
+  },
+  "Liverpool": {
+    "elo": 1880,
+    "form": [
+      "W",
+      "D",
+      "W",
+      "W",
+      "W"
+    ],
+    "golRata": 2.0,
+    "kebobolanRata": 0.8,
+    "liga": "Premier League",
+    "winRate": 70
+  },
+  "Man City": {
+    "elo": 1920,
+    "form": [
+      "W",
+      "W",
+      "W",
+      "D",
+      "W"
+    ],
+    "golRata": 2.2,
+    "kebobolanRata": 0.7,
+    "liga": "Premier League",
+    "winRate": 75
+  },
+  "Real Madrid": {
+    "elo": 1910,
+    "form": [
+      "W",
+      "W",
+      "W",
+      "W",
+      "D"
+    ],
+    "golRata": 2.3,
+    "kebobolanRata": 0.8,
+    "liga": "La Liga",
+    "winRate": 75
+  },
+  "Villarreal": {
+    "elo": 1710,
+    "form": [
+      "D",
+      "W",
+      "L",
+      "W",
+      "D"
+    ],
+    "golRata": 1.4,
+    "kebobolanRata": 1.2,
+    "liga": "La Liga",
+    "winRate": 45
+  },
+  "_H2H": {
+    "Alaves vs Villarreal": {
+      "Alaves": 3,
+      "Seri": 3,
+      "Villarreal": 4,
+      "main": 10
+    },
+    "Arsenal vs Man City": {
+      "Arsenal": 2,
+      "Man City": 6,
+      "Seri": 2,
+      "main": 10
+    },
+    "Real Madrid vs Barcelona": {
+      "Barcelona": 4,
+      "Real Madrid": 4,
+      "Seri": 2,
+      "main": 10
+    }
+  }
+}
