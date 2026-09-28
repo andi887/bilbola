@@ -1,25 +1,47 @@
 <!DOCTYPE html>
-<html lang="id">
+<html>
 <head>
   <meta charset="UTF-8">
   <title>Daftar Tim Sepak Bola Dunia</title>
-  <link rel="stylesheet" href="../css/teams.css">
+  <style>
+    body { font-family: sans-serif; max-width: 800px; margin: 20px auto; }
+    h2 { background: #eee; padding: 8px; margin-top: 25px; }
+    ul { columns: 2; }
+  </style>
 </head>
 <body>
-  <header>
-    <h2>Daftar Tim Sepak Bola Dunia</h2>
-  </header>
+  <h1>Daftar Tim Sepak Bola Dunia</h1>
+  <div id="daftar-tim">Loading...</div>
 
-  <main>
-    <section id="teams-list">
-      <ul id="teamsContainer"></ul>
-    </section>
-  </main>
+  <script>
+    // PENTING: karena file ini di /pages/, harus pakai ../data/
+    fetch('../data/teams.json')
+      .then(r => {
+        if (!r.ok) throw new Error(r.status);
+        return r.json();
+      })
+      .then(data => {
+        const container = document.getElementById('daftar-tim');
+        container.innerHTML = '';
+        
+        for (const [liga, klubList] of Object.entries(data)) {
+          const h2 = document.createElement('h2');
+          h2.textContent = liga;
+          container.appendChild(h2);
 
-  <footer>
-    <p>&copy; 2026 Situs Prediksi Bola</p>
-  </footer>
-
-  <script src="../js/teams.js"></script>
+          const ul = document.createElement('ul');
+          klubList.forEach(nama => {
+            const li = document.createElement('li');
+            li.textContent = nama;
+            ul.appendChild(li);
+          });
+          container.appendChild(ul);
+        }
+      })
+      .catch(e => {
+        document.getElementById('daftar-tim').textContent = 'Gagal load: ' + e.message;
+        console.error(e);
+      });
+  </script>
 </body>
 </html>
