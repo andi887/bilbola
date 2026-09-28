@@ -2,8 +2,11 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Generator Prediksi Bola</title>
   <link rel="stylesheet" href="../css/generator.css">
+  <!-- Fix favicon 404 -->
+  <link rel="icon" href="data:,">
 </head>
 <body>
   <header>
@@ -32,7 +35,17 @@
 
     <section id="alurPrediksi">
       <h3>Alur Perhitungan Prediksi</h3>
-      <img src="../assets/images/flowchart-prediksi.png" alt="Alur Prediksi Pertandingan Bola">
+      <!-- 
+        FIX 404 flowchart:
+        Path lama kamu ../assets/images/flowchart-prediksi.png sudah benar kalau file memang di situ.
+        Kalau file kamu ada di ../images/flowchart-prediksi.png, ganti src di bawah.
+        Saya tambahkan onerror biar tidak muncul icon broken jika file belum di-upload.
+      -->
+      <img src="../assets/images/flowchart-prediksi.png" 
+           alt="Alur Prediksi Pertandingan Bola"
+           style="max-width:100%; height:auto;"
+           onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+      <p style="display:none; color:#888; font-style:italic;">Gambar flowchart-prediksi.png belum ditemukan di /assets/images/. Upload file tersebut atau ganti path src jika lokasi berbeda.</p>
     </section>
   </main>
 
