@@ -3,41 +3,86 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>BilBola - Tahap 1</title>
+<title>BilBola - Sistem Analisis Olahraga Realtime</title>
 <link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="css/components.css">
 </head>
 <body>
 <header>
-  <h1>⚽ BilBola - Tahap 1 (Folder Rapih)</h1>
-  <p>Versi paling sederhana: index.html + css + js + data</p>
+  <div class="header-inner">
+    <div class="logo"><span>⚽</span> BilBola</div>
+    <nav>
+      <a class="active" href="index.html">Prediksi</a>
+      <a href="#">Tim</a>
+      <a href="#">Jadwal</a>
+    </nav>
+  </div>
 </header>
+
 <main>
-  <section class="card">
-    <h3>Pilih Pertandingan</h3>
-    <div class="row">
-      <select id="teamA"></select>
-      <span>VS</span>
-      <select id="teamB"></select>
-    </div>
-    <button id="btn">Prediksi</button>
-    <div id="result"></div>
+  <section class="hero">
+    <h1>Sistem Analisis <span>Olahraga Realtime</span></h1>
+    <p>Engine Elo Rating + Form + Home Advantage. Transparan & edukatif.</p>
   </section>
 
-  <section class="card">
-    <h3>📁 Struktur Repo Tahap 1 (Super Simple)</h3>
-    <pre>
-bilbola/
-├── index.html      <- file ini
-├── css/
-│   └── main.css    <- styling
-├── js/
-│   └── app.js      <- logika
-└── data/
-    └── teams.json  <- database tim
-    </pre>
-    <p>Next tahap: tambah matches.json, leagues.json</p>
+  <section class="predictor-card">
+    <div class="team-selectors">
+      <div class="team-box">
+        <label>Team A (Home)</label>
+        <select id="teamA"></select>
+        <div id="metaA" class="team-meta"></div>
+      </div>
+      <div class="vs">VS</div>
+      <div class="team-box">
+        <label>Team B (Away)</label>
+        <select id="teamB"></select>
+        <div id="metaB" class="team-meta"></div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <label class="toggle"><input type="checkbox" id="homeAdv" checked> Home Advantage A</label>
+    </div>
+
+    <button id="btnPredict" class="btn-primary">Prediksi Sekarang</button>
+
+    <div id="resultCard" class="result-card">
+      <div class="result-header">
+        <h4>Hasil Prediksi</h4>
+        <span class="badge">Confidence: <b id="conf">-</b></span>
+      </div>
+      <div class="prob-grid">
+        <div class="prob"><div class="pct" id="probA">-</div><div class="label">Menang A</div><div class="bar"><div id="barA" class="fill"></div></div></div>
+        <div class="prob"><div class="pct" id="probD">-</div><div class="label">Seri</div></div>
+        <div class="prob"><div class="pct" id="probB">-</div><div class="label">Menang B</div><div class="bar"><div id="barB" class="fill"></div></div></div>
+      </div>
+      <div class="score" id="scorePred">- - -</div>
+      <ul id="explain" class="explain"></ul>
+    </div>
+  </section>
+
+  <section class="info-grid">
+    <div class="info-card">
+      <h4>📅 Jadwal Hari Ini</h4>
+      <div id="todayMatches">Loading...</div>
+    </div>
+    <div class="info-card">
+      <h4>🧠 Cara Kerja</h4>
+      <ul>
+        <li><b>Elo 45%</b> - rating dinamis</li>
+        <li><b>Form 20%</b> - 5 laga terakhir</li>
+        <li><b>Attack vs Defense 20%</b></li>
+        <li><b>Home 15%</b></li>
+      </ul>
+      <p class="muted">Rumus ada di <code>js/elo.js</code> & <code>js/predictor.js</code></p>
+    </div>
   </section>
 </main>
-<script src="js/app.js"></script>
+
+<footer>
+  <p>BilBola • index.html di root • css/ di root • js/ di root • data/ di root • © 2026</p>
+</footer>
+
+<script type="module" src="js/main.js"></script>
 </body>
 </html>
