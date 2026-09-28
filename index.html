@@ -1,88 +1,41 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>BilBola - Sistem Analisis Olahraga Realtime</title>
-<link rel="stylesheet" href="css/main.css">
-<link rel="stylesheet" href="css/components.css">
+  <meta charset="UTF-8">
+  <title>Situs Prediksi Bola</title>
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<header>
-  <div class="header-inner">
-    <div class="logo"><span>⚽</span> BilBola</div>
+  <!-- Header -->
+  <header>
+    <h1>⚽ Situs Prediksi Bola</h1>
     <nav>
-      <a class="active" href="index.html">Prediksi</a>
-      <a href="#">Tim</a>
-      <a href="#">Jadwal</a>
-    </nav>
-  </div>
-</header>
-
-<main>
-  <section class="hero">
-    <h1>Sistem Analisis <span>Olahraga Realtime</span></h1>
-    <p>Engine Elo Rating + Form + Home Advantage. Transparan & edukatif.</p>
-  </section>
-
-  <section class="predictor-card">
-    <div class="team-selectors">
-      <div class="team-box">
-        <label>Team A (Home)</label>
-        <select id="teamA"></select>
-        <div id="metaA" class="team-meta"></div>
-      </div>
-      <div class="vs">VS</div>
-      <div class="team-box">
-        <label>Team B (Away)</label>
-        <select id="teamB"></select>
-        <div id="metaB" class="team-meta"></div>
-      </div>
-    </div>
-
-    <div class="controls">
-      <label class="toggle"><input type="checkbox" id="homeAdv" checked> Home Advantage A</label>
-    </div>
-
-    <button id="btnPredict" class="btn-primary">Prediksi Sekarang</button>
-
-    <div id="resultCard" class="result-card">
-      <div class="result-header">
-        <h4>Hasil Prediksi</h4>
-        <span class="badge">Confidence: <b id="conf">-</b></span>
-      </div>
-      <div class="prob-grid">
-        <div class="prob"><div class="pct" id="probA">-</div><div class="label">Menang A</div><div class="bar"><div id="barA" class="fill"></div></div></div>
-        <div class="prob"><div class="pct" id="probD">-</div><div class="label">Seri</div></div>
-        <div class="prob"><div class="pct" id="probB">-</div><div class="label">Menang B</div><div class="bar"><div id="barB" class="fill"></div></div></div>
-      </div>
-      <div class="score" id="scorePred">- - -</div>
-      <ul id="explain" class="explain"></ul>
-    </div>
-  </section>
-
-  <section class="info-grid">
-    <div class="info-card">
-      <h4>📅 Jadwal Hari Ini</h4>
-      <div id="todayMatches">Loading...</div>
-    </div>
-    <div class="info-card">
-      <h4>🧠 Cara Kerja</h4>
       <ul>
-        <li><b>Elo 45%</b> - rating dinamis</li>
-        <li><b>Form 20%</b> - 5 laga terakhir</li>
-        <li><b>Attack vs Defense 20%</b></li>
-        <li><b>Home 15%</b></li>
+        <li><a href="pages/teams.html">Daftar Tim</a></li>
+        <li><a href="pages/generator.html">Generator Prediksi</a></li>
+        <li><a href="pages/parlay.html">Kalkulator Parlay</a></li>
       </ul>
-      <p class="muted">Rumus ada di <code>js/elo.js</code> & <code>js/predictor.js</code></p>
-    </div>
-  </section>
-</main>
+    </nav>
+  </header>
 
-<footer>
-  <p>BilBola • index.html di root • css/ di root • js/ di root • data/ di root • © 2026</p>
-</footer>
+  <!-- Konten Utama -->
+  <main>
+    <section class="intro">
+      <h2>Selamat Datang</h2>
+      <p>
+        Situs ini menyediakan tiga fitur utama:
+      </p>
+      <ul>
+        <li>📋 Daftar tim sepak bola dunia</li>
+        <li>🔮 Generator prediksi pertandingan berbasis odds + statistik</li>
+        <li>🧮 Kalkulator parlay untuk menghitung potensi keuntungan</li>
+      </ul>
+    </section>
+  </main>
 
-<script type="module" src="js/main.js"></script>
+  <!-- Footer -->
+  <footer>
+    <p>&copy; 2026 Situs Prediksi Bola - Dibangun dengan HTML, CSS, JS, JSON, TXT</p>
+  </footer>
 </body>
 </html>
