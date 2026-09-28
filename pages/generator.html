@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Generator Prediksi Bola</title>
+  <link rel="stylesheet" href="../css/generator.css">
+</head>
+<body>
+  <header>
+    <h2>Generator Prediksi Pertandingan Bola</h2>
+  </header>
+
+  <main>
+    <section id="input-section">
+      <label>Tim 1:
+        <select id="tim1"></select>
+      </label>
+
+      <label>Tim 2:
+        <select id="tim2"></select>
+      </label>
+
+      <h3>Masukkan Odds Pertandingan</h3>
+      <label>Odds Tim 1: <input type="number" id="oddA" step="0.01" value="2.10"></label>
+      <label>Odds Seri: <input type="number" id="oddDraw" step="0.01" value="3.40"></label>
+      <label>Odds Tim 2: <input type="number" id="oddB" step="0.01" value="1.95"></label>
+
+      <button id="btnPrediksi">Hasilkan Prediksi</button>
+    </section>
+
+    <section id="hasilPrediksi"></section>
+
+    <section id="alurPrediksi">
+      <h3>Alur Perhitungan Prediksi</h3>
+      <img src="../assets/images/flowchart-prediksi.png" alt="Alur Prediksi Pertandingan Bola">
+    </section>
+  </main>
+
+  <script src="../js/generator.js"></script>
+</body>
+</html>
