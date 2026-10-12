@@ -1,7 +1,7 @@
 // =========================================================
 // v3.5 PINK THEME - Latar hitam -> pink
 // Dual mode Total & Rata-rata tetap ada
-// PERBAIKAN: Tombol Kembali ke Beranda sekarang berfungsi navigasi
+// PERBAIKAN:
 // =========================================================
 let matchCount = 1;
 const MAX_MATCHES = 5;
