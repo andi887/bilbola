@@ -2,11 +2,12 @@
 // TARUH FILE INI DI: bilbola/js/firebase-config.js
 // GANTI DENGAN CONFIG DARI Firebase Console kamu
 
-export const firebaseConfig = {
-  apiKey: "AIzaSyXXXX-XXXX",
-  authDomain: "parlaypribadi-xxxx.firebaseapp.com",
+const firebaseConfig = {
+  apiKey: "AIzaSyC5knp2eCkE4pzuNRodN5SgGhaq_H416vE",
+  authDomain: "parlaypribadi.firebaseapp.com",
+  databaseURL: "https://parlaypribadi-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "parlaypribadi",
-  storageBucket: "parlaypribadi.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef"
+  storageBucket: "parlaypribadi.firebasestorage.app",
+  messagingSenderId: "42241144949",
+  appId: "1:42241144949:web:1bbc9c022c717d4643203c"
 };
