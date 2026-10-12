@@ -194,12 +194,12 @@ function hitungSingle(idx){
   const totalM=p1+pD+p2;
   const prob1M=p1/totalM, probDM=pD/totalM, prob2M=p2/totalM;
 
-  let gfATotal=parseFloat(document.getElementById(`gf_${idx}_A_total`)?.value)||11;
-  let gaATotal=parseFloat(document.getElementById(`ga_${idx}_A_total`)?.value)||4;
-  let gfBTotal=parseFloat(document.getElementById(`gf_${idx}_B_total`)?.value)||13;
-  let gaBTotal=parseFloat(document.getElementById(`ga_${idx}_B_total`)?.value)||7;
-  let h2hA=parseFloat(document.getElementById(`h2hA_${idx}`)?.value)||1.8;
-  let h2hB=parseFloat(document.getElementById(`h2hB_${idx}`)?.value)||1.6;
+  let gfATotal=parseFloat(document.getElementById(`gf_${idx}_A_total`)?.value)||0;
+  let gaATotal=parseFloat(document.getElementById(`ga_${idx}_A_total`)?.value)||0;
+  let gfBTotal=parseFloat(document.getElementById(`gf_${idx}_B_total`)?.value)||0;
+  let gaBTotal=parseFloat(document.getElementById(`ga_${idx}_B_total`)?.value)||0;
+  let h2hA=parseFloat(document.getElementById(`h2hA_${idx}`)?.value)||0.0;
+  let h2hB=parseFloat(document.getElementById(`h2hB_${idx}`)?.value)||0.0;
 
   let gfA=gfATotal/5, gaA=gaATotal/5, gfB=gfBTotal/5, gaB=gaBTotal/5;
   const homeAdv=document.getElementById(`homeAdv_${idx}`)?.checked;
