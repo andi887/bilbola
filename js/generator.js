@@ -1,6 +1,7 @@
 // =========================================================
 // v3.5 PINK THEME - Latar hitam -> pink
 // Dual mode Total & Rata-rata tetap ada
+// PERBAIKAN: Tombol Kembali ke Beranda sekarang berfungsi navigasi
 // =========================================================
 let matchCount = 1;
 const MAX_MATCHES = 5;
@@ -155,12 +156,14 @@ function tambahPrediksi(){
   loadTeams(); updateTambahButton(); updateXgPreview(matchCount);
   document.getElementById(`matchCard_${matchCount}`)?.scrollIntoView({behavior:'smooth'});
 }
+
 function hapusPrediksi(idx){
   if(document.querySelectorAll('.match-card').length<=1){ alert('Minimal 1!'); return; }
   document.getElementById(`matchCard_${idx}`)?.remove();
   matchCount=document.querySelectorAll('.match-card').length;
   updateTambahButton();
 }
+
 function updateTambahButton(){
   const btn=document.getElementById('btnTambahPrediksi');
   if(!btn) return;
@@ -168,12 +171,14 @@ function updateTambahButton(){
   if(cur>=MAX_MATCHES){ btn.disabled=true; btn.style.opacity='0.5'; btn.innerHTML=`<i class="fa-solid fa-ban"></i> Maksimal ${MAX_MATCHES}`; }
   else{ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=`<i class="fa-solid fa-plus"></i> Tambah Prediksi (${cur}/${MAX_MATCHES})`; }
 }
+
+// ==========================================
+// PERBAIKAN DI SINI: Fungsi sekarang benar-benar mengarahkan ke index.html
+// ==========================================
 function kembaliKeBeranda(){
-  if(confirm('Kembali ke beranda? Reset semua?')){
-    const container=document.getElementById('matchesContainer');
-    if(container){ container.innerHTML=createMatchCard(1); matchCount=1; loadTeams(); updateTambahButton(); }
-    document.getElementById('hasilSemuaPrediksi').innerHTML='';
-    window.scrollTo({top:0, behavior:'smooth'});
+  if(confirm('Yakin ingin kembali ke beranda? Data yang belum disimpan akan hilang.')){
+    // Menggunakan path relatif untuk naik satu folder dari /pages/ ke root /
+    window.location.href = '../index.html';
   }
 }
 
