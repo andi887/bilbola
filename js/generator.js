@@ -1,7 +1,142 @@
 // =========================================================
-// v3.5 PINK THEME - Latar hitam -> pink
-// Dual mode Total & Rata-rata tetap ada
-// PERBAIKAN:
+// v3.6 PINK + FIRESTORE CONNECTED - Update dari v3.5 ORI kamu
+// LOGIC ORI 100% TETAP, hanya tambah sync Firestore
+// File: js/generator.js (replace file lama)
+// =========================================================
+
+// === KONFIGURASI FIREBASE - GANTI DENGAN MILIKMU ===
+// Ambil dari Firebase Console > Project Settings > Your apps > parlaypribadi
+const firebaseConfig = {
+  apiKey: "AIzaSyXXXX-GANTI-DENGAN-MILIKMU",
+  authDomain: "parlaypribadi-XXXX.firebaseapp.com",
+  projectId: "parlaypribadi",
+  storageBucket: "parlaypribadi.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abcdef"
+};
+
+let db = null;
+let firestoreConnected = false;
+
+// Init Firestore (compat mode biar tidak perlu type=module)
+function initFirestore() {
+  try {
+    if (typeof firebase === 'undefined') {
+      console.warn('Firebase SDK belum loaded, pakai local mode');
+      updateFirebaseStatus('🟡 Demo mode (Firebase SDK tidak ada)', '#fef3c7');
+      return;
+    }
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    db = firebase.firestore();
+    firestoreConnected = true;
+    console.log('✅ Firestore terhubung:', firebaseConfig.projectId);
+    updateFirebaseStatus(`🟢 Firestore terhubung: ${firebaseConfig.projectId}`, '#dcfce7');
+  } catch (err) {
+    console.error('❌ Gagal konek Firestore:', err);
+    updateFirebaseStatus(`🔴 Gagal Firestore: ${err.message}`, '#fee2e2');
+  }
+}
+
+function updateFirebaseStatus(text, bgColor) {
+  const el = document.getElementById('firebaseStatus');
+  if (el) {
+    el.textContent = text;
+    if (bgColor) el.style.background = bgColor;
+  }
+}
+
+// Simpan prediksi ke Firestore (dipanggil dari hasilkanPrediksi)
+async function simpanKeFirestore(data) {
+  // Fallback localStorage kalau Firestore belum konek
+  if (!firestoreConnected || !db) {
+    const hist = JSON.parse(localStorage.getItem('histori_bilbola') || '[]');
+    hist.unshift({ ...data, createdAt: new Date().toISOString(), id: 'local-' + Date.now() });
+    localStorage.setItem('histori_bilbola', JSON.stringify(hist.slice(0, 20)));
+    console.log('Simpan lokal (Firestore belum konek):', data.tim1, 'vs', data.tim2);
+    return;
+  }
+  try {
+    const docRef = await db.collection('predictions').add({
+      ...data,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      source: 'bilbola/pages/generator.html',
+      version: 'v3.6-pink-firestore',
+      project: firebaseConfig.projectId
+    });
+    console.log('✅ Prediksi disimpan ke Firestore:', docRef.id);
+  } catch (err) {
+    console.error('Gagal simpan Firestore, fallback lokal:', err);
+    const hist = JSON.parse(localStorage.getItem('histori_bilbola') || '[]');
+    hist.unshift({ ...data, createdAt: new Date().toISOString(), id: 'local-' + Date.now() });
+    localStorage.setItem('histori_bilbola', JSON.stringify(hist.slice(0, 20)));
+  }
+}
+
+// Load histori 5 terakhir (untuk tombol Histori)
+async function loadHistoriFirestore() {
+  const box = document.getElementById('historiBox');
+  if (!box) return;
+  box.style.display = 'block';
+  box.innerHTML = '<div style="background:#ffffff; border:1px solid #f9a8d4; border-radius:12px; padding:16px; color:#be185d;"><i class="fa-solid fa-spinner fa-spin"></i> Memuat histori...</div>';
+  box.scrollIntoView({ behavior: 'smooth' });
+
+  try {
+    let items = [];
+    if (!firestoreConnected || !db) {
+      items = JSON.parse(localStorage.getItem('histori_bilbola') || '[]');
+    } else {
+      const snap = await db.collection('predictions').orderBy('createdAt', 'desc').limit(5).get();
+      snap.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
+    }
+
+    if (items.length === 0) {
+      box.innerHTML = '<div style="background:#ffffff; border:1px solid #f9a8d4; border-radius:12px; padding:16px; color:#be185d;">Belum ada histori. Hitung prediksi dulu.</div>';
+      return;
+    }
+
+    let html = `<div style="background:#ffffff; border:1px solid #f9a8d4; border-radius:16px; padding:16px;">
+      <h3 style="margin:0 0 12px 0; color:#831843; font-size:14px;"><i class="fa-solid fa-clock-rotate-left"></i> Histori 5 Prediksi Terakhir (${firestoreConnected ? 'Firestore' : 'Local'})</h3>
+      <div style="display:grid; gap:8px; max-height:400px; overflow:auto;">`;
+
+    items.forEach(it => {
+      const t = it.tim1 ? `${it.tim1} vs ${it.tim2}` : (it.matchLabel || 'Prediksi');
+      const date = it.createdAt?.toDate ? it.createdAt.toDate().toLocaleString() : (it.createdAt ? new Date(it.createdAt).toLocaleString() : '-');
+      const top = it.topScore || it.scoreMatrix?.[0]?.score || '-';
+      html += `<div style="background:#fff1f2; border:1px solid #fecdd3; padding:10px; border-radius:10px; display:flex; justify-content:space-between; font-size:12px;">
+        <div><strong style="color:#831843;">${t}</strong><br><small style="color:#be185d;">Top ${top} | ${date}</small></div>
+        <button onclick="hapusHistoriItem('${it.id}')" style="background:#ffe4e6; border:1px solid #fecdd3; color:#be123c; padding:4px 8px; border-radius:6px; font-size:10px; cursor:pointer;">Hapus</button>
+      </div>`;
+    });
+
+    html += `</div><button onclick="document.getElementById('historiBox').style.display='none'" style="margin-top:12px; background:#fce7f3; border:1px solid #f9a8d4; padding:6px 12px; border-radius:8px; font-size:11px; color:#be185d; cursor:pointer;">Tutup</button></div>`;
+    box.innerHTML = html;
+
+  } catch (err) {
+    box.innerHTML = `<div style="background:#ffffff; border:1px solid #f9a8d4; border-radius:12px; padding:16px; color:#be123c;">Error: ${err.message}<br><small>Untuk test awal, di Firestore Rules pakai: allow read, write: if true;</small></div>`;
+  }
+}
+
+async function hapusHistoriItem(id) {
+  if (!confirm('Hapus histori ini?')) return;
+  if (id.startsWith('local-') || !firestoreConnected) {
+    let hist = JSON.parse(localStorage.getItem('histori_bilbola') || '[]');
+    hist = hist.filter(h => h.id !== id);
+    localStorage.setItem('histori_bilbola', JSON.stringify(hist));
+    loadHistoriFirestore();
+    return;
+  }
+  try {
+    await db.collection('predictions').doc(id).delete();
+    loadHistoriFirestore();
+  } catch (err) {
+    alert('Gagal hapus: ' + err.message);
+  }
+}
+
+// =========================================================
+// DARI SINI KE BAWAH ADALAH LOGIC ORI v3.5 PINK MILIKMU 100% TETAP
 // =========================================================
 let matchCount = 1;
 const MAX_MATCHES = 5;
@@ -172,12 +307,8 @@ function updateTambahButton(){
   else{ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=`<i class="fa-solid fa-plus"></i> Tambah Prediksi (${cur}/${MAX_MATCHES})`; }
 }
 
-// ==========================================
-// PERBAIKAN DI SINI: Fungsi sekarang benar-benar mengarahkan ke index.html
-// ==========================================
 function kembaliKeBeranda(){
   if(confirm('Yakin ingin kembali ke beranda? Data yang belum disimpan akan hilang.')){
-    // Menggunakan path relatif untuk naik satu folder dari /pages/ ke root /
     window.location.href = '../index.html';
   }
 }
@@ -235,7 +366,8 @@ function renderSingle(data){
     </div>`;
 }
 
-function hasilkanPrediksi(){
+// === UPDATE: hasilkanPrediksi sekarang simpan ke Firestore tanpa merubah hitungan ===
+async function hasilkanPrediksi(){
   const cards=document.querySelectorAll('.match-card');
   const all=[];
   for(const card of cards){
@@ -244,20 +376,48 @@ function hasilkanPrediksi(){
     if(!data) return;
     renderSingle(data);
     all.push(data);
+
+    // === TAMBAHAN FIRESTORE SYNC (tidak mengganggu logic) ===
+    await simpanKeFirestore({
+      tim1: data.tim1,
+      tim2: data.tim2,
+      odds1: data.odds1,
+      oddsDraw: data.oddsDraw,
+      odds2: data.odds2,
+      prob1M: data.prob1M,
+      probDM: data.probDM,
+      prob2M: data.prob2M,
+      xgA: data.xgA,
+      xgB: data.xgB,
+      probAWin: data.probAWin,
+      probDraw: data.probDraw,
+      probBWin: data.probBWin,
+      probOver25: data.probOver25,
+      topScore: data.scoreMatrix[0]?.score,
+      topScoreProb: data.scoreMatrix[0]?.prob,
+      gfATotal: data.gfATotal,
+      gaATotal: data.gaATotal,
+      gfBTotal: data.gfBTotal,
+      gaBTotal: data.gaBTotal,
+      matchLabel: `${data.tim1} vs ${data.tim2}`,
+      idx: data.idx
+    });
   }
   const globalEl=document.getElementById('hasilSemuaPrediksi');
   if(globalEl){
-    let html=`<div style="margin-top:16px; padding:16px; background:#ffffff; border:1px solid #f9a8d4; border-radius:16px; box-shadow:0 4px 12px rgba(236,72,153,0.15);"><h3 style="margin:0 0 12px 0; color:#831843; font-size:14px;">📋 Rekap ${all.length} Prediksi (Pink Theme)</h3><div style="display:grid; gap:8px;">`;
+    let html=`<div style="margin-top:16px; padding:16px; background:#ffffff; border:1px solid #f9a8d4; border-radius:16px; box-shadow:0 4px 12px rgba(236,72,153,0.15);"><h3 style="margin:0 0 12px 0; color:#831843; font-size:14px;">📋 Rekap ${all.length} Prediksi (Pink Theme) ${firestoreConnected ? '✅ Tersimpan Firestore' : '💾 Tersimpan Lokal'}</h3><div style="display:grid; gap:8px;">`;
     all.forEach(r=>{
       html+=`<div style="display:flex; justify-content:space-between; background:#fff1f2; padding:10px; border-radius:10px; border:1px solid #fecdd3;"><div><strong style="color:#831843; font-size:13px;">${r.tim1} vs ${r.tim2}</strong><br><small style="color:#be185d;">Total GF ${r.gfATotal}/${r.gfBTotal} Avg ${(r.gfATotal/5).toFixed(2)}/${(r.gfBTotal/5).toFixed(2)} | Top ${r.scoreMatrix[0].score}</small></div><div style="text-align:right;"><span style="background:${r.evA>5||r.evB>5?'#ec4899':'#f9a8d4'}; color:#fff; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:700;">${r.probAWin>r.probBWin?r.tim1:r.tim2}</span></div></div>`;
     });
-    html+=`</div><div style="margin-top:12px;"><button onclick="kembaliKeBeranda()" style="background:#fce7f3; color:#831843; border:1px solid #f9a8d4; padding:8px 16px; border-radius:8px; font-size:12px; cursor:pointer;"><i class="fa-solid fa-house"></i> Kembali ke Beranda</button></div></div>`;
+    html+=`</div><div style="margin-top:12px; display:flex; gap:8px;"><button onclick="kembaliKeBeranda()" style="background:#fce7f3; color:#831843; border:1px solid #f9a8d4; padding:8px 16px; border-radius:8px; font-size:12px; cursor:pointer;"><i class="fa-solid fa-house"></i> Kembali ke Beranda</button><button onclick="loadHistoriFirestore()" style="background:#ec4899; color:#fff; border:none; padding:8px 16px; border-radius:8px; font-size:12px; cursor:pointer;"><i class="fa-solid fa-clock-rotate-left"></i> Histori Firestore</button></div></div>`;
     globalEl.innerHTML=html;
   }
 }
 
 document.addEventListener('DOMContentLoaded', ()=>{
-  // Inject pink background ke body
+  // Init Firestore dulu
+  initFirestore();
+
   document.body.style.background='#ffe4e6';
   document.body.style.backgroundImage='linear-gradient(135deg, #ffe4e6 0%, #fce7f3 50%, #fbcfe8 100%)';
   document.body.style.minHeight='100vh';
@@ -279,7 +439,9 @@ document.addEventListener('DOMContentLoaded', ()=>{
       </div>
       <div id="matchesContainer"></div>
       <div id="hasilSemuaPrediksi"></div>
+      <div id="historiBox" style="display:none; margin-top:16px;"></div>
       <div id="statusTeams" style="margin-top:12px; font-size:11px; color:#be185d;"></div>
+      <div id="firebaseStatus" style="margin-top:8px; font-size:11px; background:#ffffff; border:1px solid #f9a8d4; padding:6px 12px; border-radius:8px; display:inline-block; color:#be185d;">🔄 Menghubungkan Firestore...</div>
     `;
     if(hasil){ hasil.parentNode.insertBefore(wrapper, hasil); hasil.style.display='none'; }
     else document.body.prepend(wrapper);
