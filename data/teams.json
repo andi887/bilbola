@@ -299,24 +299,24 @@
 "FC St. Pauli",
 "VfL Wolfsburg"
 ],
-  "LIGA ARAB" :
-  Al-Hilal	
-Al-Ittihad	
-Al-Nassr	
-Al-Ahli (Al-Ahli SFC)
-Al Qadsiah	
-NEOM SC	Tabuk 
-Al Kholood	
-Al-Diriyah 
-Al-Ettifaq	
-Al-Fayha	
-Al-Hazem	
-Al-Riyadh	
-Al-Shabab
-Al-Khaleej	Saihat
-Al-Taawoun		
-Al-Fateh	
-Abha 
-Al-Faisaly	Harmah
-  
+  "LIGA ARAB" : [
+"Al-Hilal",	
+"Al-Ittihad",
+"Al-Nassr",	
+"Al-Ahli",
+"Al Qadsiah",	
+"NEOM SC	Tabuk",
+"Al Kholood",	
+"Al-Diriyah", 
+"Al-Ettifaq",
+"Al-Fayha",	
+"Al-Hazem",	
+"Al-Riyadh",	
+"Al-Shabab",
+"Al-Khaleej	Saihat",
+"Al-Taawoun",		
+"Al-Fateh",	
+"Abha", 
+"Al-Faisaly	Harmah" 
+]  
 }
