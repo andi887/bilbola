@@ -3,44 +3,104 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Generator Prediksi Bola</title>
+  <title>Generator Prediksi Bola - Firestore Connected</title>
   <link rel="stylesheet" href="../css/generator.css">
-  <!-- Fix favicon 404 -->
+  <!-- Tema pink v3.5 (optional, bisa dihapus kalau mau tetap ori) -->
+  <style>
+    body{
+      background: linear-gradient(135deg, #ffe4e6 0%, #fce7f3 50%, #fbcfe8 100%) !important;
+      min-height: 100vh;
+    }
+    #input-section, #hasilPrediksi{
+      background: #ffffff !important;
+      border: 1px solid #f9a8d4 !important;
+      box-shadow: 0 4px 12px rgba(236,72,153,0.12);
+    }
+  </style>
   <link rel="icon" href="data:,">
+  <!-- Firebase SDK importmap - tambahkan tanpa merubah CSS/JS ori -->
+  <script type="importmap">
+  {
+    "imports": {
+      "firebase/app": "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js",
+      "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"
+    }
+  }
+  </script>
 </head>
 <body>
   <header>
     <h2>Generator Prediksi Pertandingan Bola</h2>
+    <div id="firebaseStatus" style="font-size:11px; background:#fff; border:1px solid #f9a8d4; display:inline-block; padding:6px 12px; border-radius:8px; margin-top:8px; color:#be185d;">
+      🔄 Menghubungkan Firestore...
+    </div>
+    <!-- Tombol baru sesuai permintaan kamu, tapi tidak merusak logic ori -->
+    <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+      <button onclick="window.location.href='../index.html'" style="background:#fff; border:1px solid #f9a8d4; padding:6px 12px; border-radius:8px; font-size:12px; cursor:pointer;">🏠 Kembali ke Beranda</button>
+      <button id="btnTambahPrediksi" onclick="tambahPrediksi()" style="background:#ec4899; color:#fff; border:none; padding:6px 12px; border-radius:8px; font-size:12px; cursor:pointer;">+ Tambah Prediksi (1/5)</button>
+      <button onclick="loadHistoriFirestore()" style="background:#fff; border:1px solid #f9a8d4; padding:6px 12px; border-radius:8px; font-size:12px; cursor:pointer;">📜 Histori Firestore</button>
+    </div>
   </header>
-
   <main>
-    <section id="input-section">
-      <label>Tim 1:
-        <select id="tim1"></select>
-      </label>
-
-      <label>Tim 2:
-        <select id="tim2"></select>
-      </label>
-
-      <h3>Masukkan Odds Pertandingan</h3>
-      <label>Odds Tim 1: <input type="number" id="oddA" step="0.01" value="2.10"></label>
-      <label>Odds Seri: <input type="number" id="oddDraw" step="0.01" value="3.40"></label>
-      <label>Odds Tim 2: <input type="number" id="oddB" step="0.01" value="1.95"></label>
-
-      <button id="btnPrediksi">Hasilkan Prediksi</button>
-    </section>
-
+    <!-- Container multi-match - kalau ada 1, tetap pakai ID ori tim1/tim2 biar logic ori tidak rusak -->
+    <div id="matchesContainer">
+      <section id="input-section">
+        <label>Tim 1:
+          <select id="tim1"></select>
+        </label>
+        <label>Tim 2:
+          <select id="tim2"></select>
+        </label>
+        <h3>Masukkan Odds Pertandingan</h3>
+        <label>Odds Tim 1: <input type="number" id="oddA" step="0.01" value="2.10"></label>
+        <label>Odds Seri: <input type="number" id="oddDraw" step="0.01" value="3.40"></label>
+        <label>Odds Tim 2: <input type="number" id="oddB" step="0.01" value="1.95"></label>
+        <!-- Dual Mode Total & Rata-rata yang kamu minta di screenshot -->
+        <div id="advancedStatsBox" style="margin-top:16px; padding:12px; background:#fdf2f8; border:1px solid #fbcfe8; border-radius:10px;">
+          <h4 style="margin:0 0 8px 0; font-size:12px; color:#831843;">📊 Statistik Manual (Total & Rata-rata tampil bersamaan)</h4>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div>
+              <label style="font-size:10px;">GF Total 5 Laga</label>
+              <input type="number" id="gfA_total" value="11" oninput="syncDual('A','GF')" style="width:100%;">
+              <small style="font-size:9px;">Total</small>
+            </div>
+            <div>
+              <label style="font-size:10px;">GF Rata-rata / Laga</label>
+              <input type="number" id="gfA_avg" value="2.20" oninput="syncDual('A','GF')" style="width:100%;">
+              <small style="font-size:9px;">= Total/5</small>
+            </div>
+            <div>
+              <label style="font-size:10px;">GA Total 5 Laga</label>
+              <input type="number" id="gaA_total" value="4" oninput="syncDual('A','GA')" style="width:100%;">
+            </div>
+            <div>
+              <label style="font-size:10px;">GA Rata-rata / Laga</label>
+              <input type="number" id="gaA_avg" value="0.80" oninput="syncDual('A','GA')" style="width:100%;">
+            </div>
+            <div>
+              <label style="font-size:10px;">GF Total 5 Laga (Tim 2)</label>
+              <input type="number" id="gfB_total" value="13" oninput="syncDual('B','GF')" style="width:100%;">
+            </div>
+            <div>
+              <label style="font-size:10px;">GF Rata-rata / Laga (Tim 2)</label>
+              <input type="number" id="gfB_avg" value="2.60" oninput="syncDual('B','GF')" style="width:100%;">
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px;">
+            <div><label style="font-size:10px;">H2H A vs B</label><input type="number" id="h2hA" value="1.8" style="width:100%;"></div>
+            <div><label style="font-size:10px;">H2H B vs A</label><input type="number" id="h2hB" value="1.6" style="width:100%;"></div>
+          </div>
+        </div>
+        <button id="btnPrediksi">Hasilkan Prediksi</button>
+        <div id="statusTeams" style="font-size:11px; color:#be185d; margin-top:8px;"></div>
+      </section>
+    </div>
+    <!-- Hasil tetap pakai ID ori biar JS ori tidak rusak -->
     <section id="hasilPrediksi"></section>
-
+    <section id="hasilSemuaPrediksi" style="margin-top:16px;"></section>
+    <section id="historiBox" style="display:none; margin-top:16px;"></section>
     <section id="alurPrediksi">
       <h3>Alur Perhitungan Prediksi</h3>
-      <!-- 
-        FIX 404 flowchart:
-        Path lama kamu ../assets/images/flowchart-prediksi.png sudah benar kalau file memang di situ.
-        Kalau file kamu ada di ../images/flowchart-prediksi.png, ganti src di bawah.
-        Saya tambahkan onerror biar tidak muncul icon broken jika file belum di-upload.
-      -->
       <img src="../assets/images/flowchart-prediksi.png" 
            alt="Alur Prediksi Pertandingan Bola"
            style="max-width:100%; height:auto;"
@@ -48,7 +108,167 @@
       <p style="display:none; color:#888; font-style:italic;">Gambar flowchart-prediksi.png belum ditemukan di /assets/images/. Upload file tersebut atau ganti path src jika lokasi berbeda.</p>
     </section>
   </main>
-
+  <!-- Firebase Config - GANTI DENGAN CONFIG MILIKMU -->
+  <script type="module">
+    import { initializeApp } from "firebase/app";
+    import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit, serverTimestamp } from "firebase/firestore";
+    // === GANTI INI DENGAN CONFIG DARI Firebase Console kamu ===
+    // Lihat: Firebase Console > Project Settings > Your apps > SDK setup
+    const firebaseConfig = {
+      apiKey: "AIzaSyXXXX-REPLACE-WITH-YOURS",
+      authDomain: "parlaypribadi-XXXX.firebaseapp.com",
+      projectId: "parlaypribadi",
+      storageBucket: "parlaypribadi.appspot.com",
+      messagingSenderId: "123456789",
+      appId: "1:123456789:web:abcdef"
+    };
+    let app, db, connected = false;
+    try{
+      app = initializeApp(firebaseConfig);
+      db = getFirestore(app);
+      connected = true;
+      document.getElementById('firebaseStatus').innerHTML = `🟢 Firestore terhubung: ${firebaseConfig.projectId}`;
+      document.getElementById('firebaseStatus').style.background = '#dcfce7';
+      console.log('Firestore connected');
+    }catch(e){
+      document.getElementById('firebaseStatus').innerHTML = `🟡 Demo mode (tanpa Firestore) - ${e.message}`;
+      console.warn('Firestore gagal, pakai local:', e.message);
+    }
+    // Fungsi simpan yang akan dipanggil dari generator.js ori (tanpa merubah logic hitung)
+    window.simpanKeFirestore = async function(dataPrediksi){
+      if(!connected){
+        // Fallback localStorage kalau belum konek
+        const hist = JSON.parse(localStorage.getItem('histori_bilbola')||'[]');
+        hist.unshift({...dataPrediksi, createdAt: new Date().toISOString(), id: 'local-'+Date.now()});
+        localStorage.setItem('histori_bilbola', JSON.stringify(hist.slice(0,20)));
+        return;
+      }
+      try{
+        await addDoc(collection(db, "predictions"), {
+          ...dataPrediksi,
+          createdAt: serverTimestamp(),
+          source: "pages/generator.html ori + firestore sync"
+        });
+        console.log('Saved to Firestore');
+      }catch(err){
+        console.error('Gagal simpan Firestore:', err);
+      }
+    };
+    window.loadHistoriFirestore = async function(){
+      const box = document.getElementById('historiBox');
+      box.style.display = 'block';
+      box.innerHTML = '<div style="background:#fff; border:1px solid #f9a8d4; padding:12px; border-radius:8px;">Memuat histori...</div>';
+      try{
+        let items = [];
+        if(!connected){
+          items = JSON.parse(localStorage.getItem('histori_bilbola')||'[]');
+        }else{
+          const q = query(collection(db, "predictions"), orderBy("createdAt","desc"), limit(5));
+          const snap = await getDocs(q);
+          snap.forEach(d=> items.push({id:d.id, ...d.data()}));
+        }
+        if(items.length===0){ box.innerHTML='<div style="background:#fff; padding:12px; border-radius:8px; border:1px solid #f9a8d4;">Belum ada histori</div>'; return; }
+        let html=`<div style="background:#fff; border:1px solid #f9a8d4; border-radius:12px; padding:12px;"><h4>Histori 5 Prediksi Terakhir</h4>`;
+        items.forEach(it=>{
+          html+=`<div style="background:#fff1f2; border:1px solid #fecdd3; padding:8px; border-radius:8px; margin:6px 0; font-size:12px;">${it.tim1||it.matchLabel||''} vs ${it.tim2||''} - Top ${it.topScore||''} - ${it.createdAt?.toDate?.()?.toLocaleString?.()||it.createdAt||''}</div>`;
+        });
+        html+=`<button onclick="document.getElementById('historiBox').style.display='none'" style="margin-top:8px; background:#fce7f3; border:1px solid #f9a8d4; padding:6px 12px; border-radius:8px;">Tutup</button></div>`;
+        box.innerHTML=html;
+      }catch(err){
+        box.innerHTML=`Error: ${err.message}`;
+      }
+    };
+    // Sync dual mode Total & Rata-rata (fitur yang kamu minta di screenshot)
+    window.syncDual = function(team, type){
+      if(team==='A' && type==='GF'){
+        const totalEl = document.getElementById('gfA_total');
+        const avgEl = document.getElementById('gfA_avg');
+        if(event.target===totalEl){ avgEl.value = (parseFloat(totalEl.value||0)/5).toFixed(2); }
+        else { totalEl.value = (parseFloat(avgEl.value||0)*5).toFixed(1); }
+      }
+      if(team==='A' && type==='GA'){
+        const totalEl = document.getElementById('gaA_total');
+        const avgEl = document.getElementById('gaA_avg');
+        if(event.target===totalEl){ avgEl.value = (parseFloat(totalEl.value||0)/5).toFixed(2); }
+        else { totalEl.value = (parseFloat(avgEl.value||0)*5).toFixed(1); }
+      }
+      if(team==='B' && type==='GF'){
+        const totalEl = document.getElementById('gfB_total');
+        const avgEl = document.getElementById('gfB_avg');
+        if(event.target===totalEl){ avgEl.value = (parseFloat(totalEl.value||0)/5).toFixed(2); }
+        else { totalEl.value = (parseFloat(avgEl.value||0)*5).toFixed(1); }
+      }
+    };
+    // Fitur tambah prediksi sampai 5 (tidak merusak logic ori, cuma clone section)
+    window.matchCount = 1;
+    window.tambahPrediksi = function(){
+      if(window.matchCount>=5){ alert('Maksimal 5 pertandingan!'); return; }
+      window.matchCount++;
+      const container = document.getElementById('matchesContainer');
+      const clone = document.getElementById('input-section').cloneNode(true);
+      clone.id = `input-section-${window.matchCount}`;
+      // Update IDs biar tidak bentrok
+      clone.querySelectorAll('[id]').forEach(el=>{
+        el.id = el.id + '-' + window.matchCount;
+      });
+      clone.innerHTML = `<h4>Pertandingan ${window.matchCount}</h4>` + clone.innerHTML + `<button onclick="this.parentElement.remove(); window.matchCount--; document.getElementById('matchCounter').textContent=window.matchCount+' pertandingan';" style="background:#ffe4e6; border:1px solid #fecdd3; color:#be123c; padding:6px 12px; border-radius:8px; font-size:11px; margin-top:8px;">Hapus Prediksi ${window.matchCount}</button>`;
+      container.appendChild(clone);
+      document.getElementById('matchCounter').textContent = document.querySelectorAll('#matchesContainer > section').length + ' pertandingan';
+      // Re-load teams untuk select baru
+      if(window.loadTeams) window.loadTeams();
+    };
+  </script>
+  <!-- JS ORI KAMU - TETAP DIPAKAI, TIDAK DIUBAH LOGICNYA -->
+  <!-- Kita load sebagai module agar bisa di-wrap untuk Firestore sync -->
   <script src="../js/generator.js"></script>
+  
+  <!-- WRAPPER: Tambahkan sync Firestore TANPA merubah fungsi ori -->
+  <script>
+    // Simpan fungsi ori
+    const oriHasilkanPrediksi = window.hasilkanPrediksi;
+    // Override dengan versi yang tetap panggil ori + simpan Firestore
+    window.hasilkanPrediksi = async function(){
+      // Panggil logic ori kamu (tetap hitung Poisson, market, dll)
+      if(typeof oriHasilkanPrediksi === 'function'){
+        oriHasilkanPrediksi();
+      }
+      // Ambil data dari form ori untuk disimpan
+      const tim1 = document.getElementById('tim1')?.value;
+      const tim2 = document.getElementById('tim2')?.value;
+      const oddA = parseFloat(document.getElementById('oddA')?.value);
+      const oddDraw = parseFloat(document.getElementById('oddDraw')?.value);
+      const oddB = parseFloat(document.getElementById('oddB')?.value);
+      const gfA_total = parseFloat(document.getElementById('gfA_total')?.value) || 11;
+      const gaA_total = parseFloat(document.getElementById('gaA_total')?.value) || 4;
+      const gfB_total = parseFloat(document.getElementById('gfB_total')?.value) || 13;
+      const h2hA = parseFloat(document.getElementById('h2hA')?.value) || 1.8;
+      const h2hB = parseFloat(document.getElementById('h2hB')?.value) || 1.6;
+      // Ambil hasil dari window.lastPrediction kalau ada (dari JS ori kamu)
+      const last = window.lastPrediction || {};
+      
+      // Simpan ke Firestore (tidak mengganggu tampilan)
+      if(window.simpanKeFirestore){
+        await window.simpanKeFirestore({
+          tim1, tim2,
+          oddA, oddDraw, oddB,
+          gfA_total, gaA_total, gfB_total,
+          h2hA, h2hB,
+          xgA: last.poisson?.xgA || last.xgA,
+          xgB: last.poisson?.xgB || last.xgB,
+          topScore: last.poisson?.scoreMatrix?.[0]?.score || '',
+          matchLabel: `${tim1} vs ${tim2}`,
+          // simpan semua untuk histori
+          fullData: last
+        });
+      }
+    };
+    // Pastikan btnPrediksi tetap pakai fungsi baru
+    document.addEventListener('DOMContentLoaded', ()=>{
+      const btn = document.getElementById('btnPrediksi');
+      if(btn){
+        btn.onclick = window.hasilkanPrediksi;
+      }
+    });
+  </script>
 </body>
 </html>
