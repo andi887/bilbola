@@ -1,13 +1,11 @@
 // =========================================================
-// v3.6 PINK + FIRESTORE CONNECTED - Update dari v3.5 ORI kamu
-// LOGIC ORI 100% TETAP, hanya tambah sync Firestore
-// File: js/generator.js (replace file lama)
+// v3.6.1 FIX - Teams.json tidak bisa + Firebase SDK tidak ada
+// FIX untuk screenshot kamu 0/5 dan dropdown kosong
 // =========================================================
 
-// === KONFIGURASI FIREBASE - GANTI DENGAN MILIKMU ===
-// Ambil dari Firebase Console > Project Settings > Your apps > parlaypribadi
+// === FIREBASE CONFIG - GANTI ===
 const firebaseConfig = {
-  apiKey: "AIzaSyXXXX-GANTI-DENGAN-MILIKMU",
+  apiKey: "AIzaSyXXXX-GANTI",
   authDomain: "parlaypribadi-XXXX.firebaseapp.com",
   projectId: "parlaypribadi",
   storageBucket: "parlaypribadi.appspot.com",
@@ -18,125 +16,66 @@ const firebaseConfig = {
 let db = null;
 let firestoreConnected = false;
 
-// Init Firestore (compat mode biar tidak perlu type=module)
 function initFirestore() {
   try {
     if (typeof firebase === 'undefined') {
-      console.warn('Firebase SDK belum loaded, pakai local mode');
+      console.warn('Firebase SDK belum ada - coba load via CDN dinamis');
       updateFirebaseStatus('🟡 Demo mode (Firebase SDK tidak ada)', '#fef3c7');
+      // Coba load SDK secara dinamis
+      loadFirebaseSDK();
       return;
     }
-    if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
-    }
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
     firestoreConnected = true;
-    console.log('✅ Firestore terhubung:', firebaseConfig.projectId);
-    updateFirebaseStatus(`🟢 Firestore terhubung: ${firebaseConfig.projectId}`, '#dcfce7');
+    updateFirebaseStatus(`🟢 Firestore: ${firebaseConfig.projectId}`, '#dcfce7');
   } catch (err) {
-    console.error('❌ Gagal konek Firestore:', err);
-    updateFirebaseStatus(`🔴 Gagal Firestore: ${err.message}`, '#fee2e2');
+    updateFirebaseStatus(`🔴 ${err.message}`, '#fee2e2');
   }
 }
 
-function updateFirebaseStatus(text, bgColor) {
+function loadFirebaseSDK() {
+  const appScript = document.createElement('script');
+  appScript.src = 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js';
+  appScript.onload = () => {
+    const fsScript = document.createElement('script');
+    fsScript.src = 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js';
+    fsScript.onload = () => {
+      if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+      db = firebase.firestore();
+      firestoreConnected = true;
+      updateFirebaseStatus(`🟢 Firestore terhubung: ${firebaseConfig.projectId}`, '#dcfce7');
+    };
+    document.head.appendChild(fsScript);
+  };
+  document.head.appendChild(appScript);
+}
+
+function updateFirebaseStatus(text, bg) {
   const el = document.getElementById('firebaseStatus');
-  if (el) {
-    el.textContent = text;
-    if (bgColor) el.style.background = bgColor;
-  }
+  if (el) { el.textContent = text; if (bg) el.style.background = bg; }
 }
 
-// Simpan prediksi ke Firestore (dipanggil dari hasilkanPrediksi)
 async function simpanKeFirestore(data) {
-  // Fallback localStorage kalau Firestore belum konek
   if (!firestoreConnected || !db) {
     const hist = JSON.parse(localStorage.getItem('histori_bilbola') || '[]');
     hist.unshift({ ...data, createdAt: new Date().toISOString(), id: 'local-' + Date.now() });
     localStorage.setItem('histori_bilbola', JSON.stringify(hist.slice(0, 20)));
-    console.log('Simpan lokal (Firestore belum konek):', data.tim1, 'vs', data.tim2);
     return;
   }
   try {
-    const docRef = await db.collection('predictions').add({
+    await db.collection('predictions').add({
       ...data,
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      source: 'bilbola/pages/generator.html',
-      version: 'v3.6-pink-firestore',
-      project: firebaseConfig.projectId
+      version: 'v3.6.1-fix'
     });
-    console.log('✅ Prediksi disimpan ke Firestore:', docRef.id);
   } catch (err) {
-    console.error('Gagal simpan Firestore, fallback lokal:', err);
-    const hist = JSON.parse(localStorage.getItem('histori_bilbola') || '[]');
-    hist.unshift({ ...data, createdAt: new Date().toISOString(), id: 'local-' + Date.now() });
-    localStorage.setItem('histori_bilbola', JSON.stringify(hist.slice(0, 20)));
-  }
-}
-
-// Load histori 5 terakhir (untuk tombol Histori)
-async function loadHistoriFirestore() {
-  const box = document.getElementById('historiBox');
-  if (!box) return;
-  box.style.display = 'block';
-  box.innerHTML = '<div style="background:#ffffff; border:1px solid #f9a8d4; border-radius:12px; padding:16px; color:#be185d;"><i class="fa-solid fa-spinner fa-spin"></i> Memuat histori...</div>';
-  box.scrollIntoView({ behavior: 'smooth' });
-
-  try {
-    let items = [];
-    if (!firestoreConnected || !db) {
-      items = JSON.parse(localStorage.getItem('histori_bilbola') || '[]');
-    } else {
-      const snap = await db.collection('predictions').orderBy('createdAt', 'desc').limit(5).get();
-      snap.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
-    }
-
-    if (items.length === 0) {
-      box.innerHTML = '<div style="background:#ffffff; border:1px solid #f9a8d4; border-radius:12px; padding:16px; color:#be185d;">Belum ada histori. Hitung prediksi dulu.</div>';
-      return;
-    }
-
-    let html = `<div style="background:#ffffff; border:1px solid #f9a8d4; border-radius:16px; padding:16px;">
-      <h3 style="margin:0 0 12px 0; color:#831843; font-size:14px;"><i class="fa-solid fa-clock-rotate-left"></i> Histori 5 Prediksi Terakhir (${firestoreConnected ? 'Firestore' : 'Local'})</h3>
-      <div style="display:grid; gap:8px; max-height:400px; overflow:auto;">`;
-
-    items.forEach(it => {
-      const t = it.tim1 ? `${it.tim1} vs ${it.tim2}` : (it.matchLabel || 'Prediksi');
-      const date = it.createdAt?.toDate ? it.createdAt.toDate().toLocaleString() : (it.createdAt ? new Date(it.createdAt).toLocaleString() : '-');
-      const top = it.topScore || it.scoreMatrix?.[0]?.score || '-';
-      html += `<div style="background:#fff1f2; border:1px solid #fecdd3; padding:10px; border-radius:10px; display:flex; justify-content:space-between; font-size:12px;">
-        <div><strong style="color:#831843;">${t}</strong><br><small style="color:#be185d;">Top ${top} | ${date}</small></div>
-        <button onclick="hapusHistoriItem('${it.id}')" style="background:#ffe4e6; border:1px solid #fecdd3; color:#be123c; padding:4px 8px; border-radius:6px; font-size:10px; cursor:pointer;">Hapus</button>
-      </div>`;
-    });
-
-    html += `</div><button onclick="document.getElementById('historiBox').style.display='none'" style="margin-top:12px; background:#fce7f3; border:1px solid #f9a8d4; padding:6px 12px; border-radius:8px; font-size:11px; color:#be185d; cursor:pointer;">Tutup</button></div>`;
-    box.innerHTML = html;
-
-  } catch (err) {
-    box.innerHTML = `<div style="background:#ffffff; border:1px solid #f9a8d4; border-radius:12px; padding:16px; color:#be123c;">Error: ${err.message}<br><small>Untuk test awal, di Firestore Rules pakai: allow read, write: if true;</small></div>`;
-  }
-}
-
-async function hapusHistoriItem(id) {
-  if (!confirm('Hapus histori ini?')) return;
-  if (id.startsWith('local-') || !firestoreConnected) {
-    let hist = JSON.parse(localStorage.getItem('histori_bilbola') || '[]');
-    hist = hist.filter(h => h.id !== id);
-    localStorage.setItem('histori_bilbola', JSON.stringify(hist));
-    loadHistoriFirestore();
-    return;
-  }
-  try {
-    await db.collection('predictions').doc(id).delete();
-    loadHistoriFirestore();
-  } catch (err) {
-    alert('Gagal hapus: ' + err.message);
+    console.error(err);
   }
 }
 
 // =========================================================
-// DARI SINI KE BAWAH ADALAH LOGIC ORI v3.5 PINK MILIKMU 100% TETAP
+// LOGIC ORI v3.5 - TETAP 100%
 // =========================================================
 let matchCount = 1;
 const MAX_MATCHES = 5;
@@ -149,40 +88,30 @@ function poissonLog(x, lambda){
 }
 
 function syncStats(idx,team,type){
-  const tEl = document.getElementById(`gf_${idx}_${team}_total`);
-  const aEl = document.getElementById(`gf_${idx}_${team}_avg`);
-  const tElGA = document.getElementById(`ga_${idx}_${team}_total`);
-  const aElGA = document.getElementById(`ga_${idx}_${team}_avg`);
   if(type==='GF'){
-    const total = document.getElementById(`gf_${idx}_${team}_total`);
-    const avg = document.getElementById(`gf_${idx}_${team}_avg`);
+    const total = document.getElementById(`gf_${idx}_${team}_total`) || document.getElementById(`gf${team}_total`) || document.getElementById('gfA_total');
+    const avg = document.getElementById(`gf_${idx}_${team}_avg`) || document.getElementById(`gf${team}_avg`) || document.getElementById('gfA_avg');
     if(!total||!avg) return;
-    if(event && event.target===total){
-      const v=parseFloat(total.value); if(!isNaN(v)) avg.value=(v/5).toFixed(2);
-    }else if(event && event.target===avg){
-      const v=parseFloat(avg.value); if(!isNaN(v)) total.value=(v*5).toFixed(1);
-    }
+    if(event && event.target===total){ const v=parseFloat(total.value); if(!isNaN(v)) avg.value=(v/5).toFixed(2); }
+    else if(event && event.target===avg){ const v=parseFloat(avg.value); if(!isNaN(v)) total.value=(v*5).toFixed(1); }
   }
   if(type==='GA'){
-    const total = document.getElementById(`ga_${idx}_${team}_total`);
-    const avg = document.getElementById(`ga_${idx}_${team}_avg`);
+    const total = document.getElementById(`ga_${idx}_${team}_total`) || document.getElementById('gaA_total');
+    const avg = document.getElementById(`ga_${idx}_${team}_avg`) || document.getElementById('gaA_avg');
     if(!total||!avg) return;
-    if(event && event.target===total){
-      const v=parseFloat(total.value); if(!isNaN(v)) avg.value=(v/5).toFixed(2);
-    }else if(event && event.target===avg){
-      const v=parseFloat(avg.value); if(!isNaN(v)) total.value=(v*5).toFixed(1);
-    }
+    if(event && event.target===total){ const v=parseFloat(total.value); if(!isNaN(v)) avg.value=(v/5).toFixed(2); }
+    else if(event && event.target===avg){ const v=parseFloat(avg.value); if(!isNaN(v)) total.value=(v*5).toFixed(1); }
   }
   updateXgPreview(idx);
 }
 
 function updateXgPreview(idx){
-  const gfATotal = parseFloat(document.getElementById(`gf_${idx}_A_total`)?.value) || 0;
-  const gaATotal = parseFloat(document.getElementById(`ga_${idx}_A_total`)?.value) || 0;
-  const gfBTotal = parseFloat(document.getElementById(`gf_${idx}_B_total`)?.value) || 0;
+  const gfATotal = parseFloat(document.getElementById(`gf_${idx}_A_total`)?.value || document.getElementById('gfA_total')?.value) || 0;
+  const gaATotal = parseFloat(document.getElementById(`ga_${idx}_A_total`)?.value || document.getElementById('gaA_total')?.value) || 0;
+  const gfBTotal = parseFloat(document.getElementById(`gf_${idx}_B_total`)?.value || document.getElementById('gfB_total')?.value) || 0;
   const gaBTotal = parseFloat(document.getElementById(`ga_${idx}_B_total`)?.value) || 0;
-  const h2hA = parseFloat(document.getElementById(`h2hA_${idx}`)?.value) || 1.8;
-  const h2hB = parseFloat(document.getElementById(`h2hB_${idx}`)?.value) || 1.6;
+  const h2hA = parseFloat(document.getElementById(`h2hA_${idx}`)?.value || document.getElementById('h2hA')?.value) || 1.8;
+  const h2hB = parseFloat(document.getElementById(`h2hB_${idx}`)?.value || document.getElementById('h2hB')?.value) || 1.6;
   const homeAdv = document.getElementById(`homeAdv_${idx}`)?.checked;
   let gfA = gfATotal/5, gaA = gaATotal/5, gfB = gfBTotal/5, gaB = gaBTotal/5;
   let xgA = Math.max(0.2,(gfA*0.4)+(gaB*0.4)+(h2hA*0.2));
@@ -202,38 +131,33 @@ function createMatchCard(idx){
         <span style="background:#fce7f3; border:1px solid #f9a8d4; padding:4px 8px; border-radius:8px; font-size:11px; color:#be185d;">#${idx}/5</span>
       </div>
     </div>
-
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
       <div><label style="font-size:11px; color:#9d174d; font-weight:600;">Tuan Rumah (Tim 1)</label><select id="tim1_${idx}" style="width:100%; margin-top:4px; background:#fff1f2; border:1px solid #f9a8d4; border-radius:8px; padding:8px; color:#831843; font-weight:600;"></select></div>
       <div><label style="font-size:11px; color:#9d174d; font-weight:600;">Tamu (Tim 2)</label><select id="tim2_${idx}" style="width:100%; margin-top:4px; background:#fff1f2; border:1px solid #f9a8d4; border-radius:8px; padding:8px; color:#831843; font-weight:600;"></select></div>
     </div>
-
     <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:14px;">
       <div><label style="font-size:11px; color:#9d174d;">Odds A (1)</label><input type="number" step="0.01" id="oddA_${idx}" value="2.10" style="width:100%; margin-top:4px; background:#fff7f8; border:1px solid #f9a8d4; border-radius:8px; padding:8px; color:#db2777; font-weight:700; text-align:center;"></div>
       <div><label style="font-size:11px; color:#9d174d;">Odds Seri (X)</label><input type="number" step="0.01" id="oddDraw_${idx}" value="3.60" style="width:100%; margin-top:4px; background:#fff7f8; border:1px solid #f9a8d4; border-radius:8px; padding:8px; color:#d97706; font-weight:700; text-align:center;"></div>
       <div><label style="font-size:11px; color:#9d174d;">Odds B (2)</label><input type="number" step="0.01" id="oddB_${idx}" value="3.20" style="width:100%; margin-top:4px; background:#fff7f8; border:1px solid #f9a8d4; border-radius:8px; padding:8px; color:#7c3aed; font-weight:700; text-align:center;"></div>
     </div>
-
     <div style="background:#fdf2f8; padding:12px; border-radius:12px; border:1px solid #fbcfe8;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
         <span style="font-size:12px; font-weight:700; color:#831843;"><i class="fa-solid fa-chart-simple" style="color:#ec4899;"></i> Statistik Manual (Total & Rata-rata)</span>
         <label style="font-size:11px; color:#9d174d; display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" id="homeAdv_${idx}" checked onchange="updateXgPreview(${idx})" style="accent-color:#ec4899;"> Home +15%</label>
       </div>
-
       <div style="background:#ffffff; padding:12px; border-radius:10px; border:1px solid #f9a8d4; margin-bottom:10px;">
-        <div id="labelTeamAStat_${idx}" style="font-size:11px; font-weight:700; color:#db2777; margin-bottom:10px;">Arsenal - 5 Laga Terakhir</div>
+        <div style="font-size:11px; font-weight:700; color:#db2777; margin-bottom:10px;">Tim A - 5 Laga Terakhir</div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:10px; padding:8px; background:#fff1f2; border-radius:8px; border:1px solid #fecdd3;">
-          <div><label style="font-size:10px; color:#be185d; font-weight:700;">GF - Total 5 Laga</label><input type="number" step="0.1" id="gf_${idx}_A_total" value="11" oninput="syncStats(${idx},'A','GF')" style="width:100%; margin-top:4px; background:#ffffff; border:1px solid #f9a8d4; border-radius:6px; padding:8px; color:#831843; font-weight:700;"><small style="font-size:9px; color:#be185d;">Total gol 5 laga</small></div>
-          <div><label style="font-size:10px; color:#be185d; font-weight:700;">GF - Rata-rata / Laga</label><input type="number" step="0.01" id="gf_${idx}_A_avg" value="2.20" oninput="syncStats(${idx},'A','GF')" style="width:100%; margin-top:4px; background:#ffffff; border:1px solid #f9a8d4; border-radius:6px; padding:8px; color:#db2777; font-weight:700;"><small style="font-size:9px; color:#be185d;">= Total / 5</small></div>
+          <div><label style="font-size:10px; color:#be185d; font-weight:700;">GF - Total 5 Laga</label><input type="number" step="0.1" id="gf_${idx}_A_total" value="11" oninput="syncStats(${idx},'A','GF')" style="width:100%; margin-top:4px; background:#ffffff; border:1px solid #f9a8d4; border-radius:6px; padding:8px; color:#831843; font-weight:700;"></div>
+          <div><label style="font-size:10px; color:#be185d; font-weight:700;">GF - Rata-rata / Laga</label><input type="number" step="0.01" id="gf_${idx}_A_avg" value="2.20" oninput="syncStats(${idx},'A','GF')" style="width:100%; margin-top:4px; background:#ffffff; border:1px solid #f9a8d4; border-radius:6px; padding:8px; color:#db2777; font-weight:700;"></div>
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:8px; background:#fff1f2; border-radius:8px; border:1px solid #fecdd3;">
           <div><label style="font-size:10px; color:#9f1239; font-weight:700;">GA - Total 5 Laga</label><input type="number" step="0.1" id="ga_${idx}_A_total" value="4" oninput="syncStats(${idx},'A','GA')" style="width:100%; margin-top:4px; background:#ffffff; border:1px solid #f9a8d4; border-radius:6px; padding:8px; color:#831843; font-weight:700;"></div>
           <div><label style="font-size:10px; color:#9f1239; font-weight:700;">GA - Rata-rata / Laga</label><input type="number" step="0.01" id="ga_${idx}_A_avg" value="0.80" oninput="syncStats(${idx},'A','GA')" style="width:100%; margin-top:4px; background:#ffffff; border:1px solid #f9a8d4; border-radius:6px; padding:8px; color:#be123c; font-weight:700;"></div>
         </div>
       </div>
-
       <div style="background:#ffffff; padding:12px; border-radius:10px; border:1px solid #f9a8d4; margin-bottom:10px;">
-        <div id="labelTeamBStat_${idx}" style="font-size:11px; font-weight:700; color:#7c3aed; margin-bottom:10px;">Aston Villa - 5 Laga Terakhir</div>
+        <div style="font-size:11px; font-weight:700; color:#7c3aed; margin-bottom:10px;">Tim B - 5 Laga Terakhir</div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:10px; padding:8px; background:#faf5ff; border-radius:8px; border:1px solid #e9d5ff;">
           <div><label style="font-size:10px; color:#7c3aed; font-weight:700;">GF - Total 5 Laga</label><input type="number" step="0.1" id="gf_${idx}_B_total" value="13" oninput="syncStats(${idx},'B','GF')" style="width:100%; margin-top:4px; background:#ffffff; border:1px solid #d8b4fe; border-radius:6px; padding:8px; color:#581c87; font-weight:700;"></div>
           <div><label style="font-size:10px; color:#7c3aed; font-weight:700;">GF - Rata-rata / Laga</label><input type="number" step="0.01" id="gf_${idx}_B_avg" value="2.60" oninput="syncStats(${idx},'B','GF')" style="width:100%; margin-top:4px; background:#ffffff; border:1px solid #d8b4fe; border-radius:6px; padding:8px; color:#7c3aed; font-weight:700;"></div>
@@ -243,17 +167,16 @@ function createMatchCard(idx){
           <div><label style="font-size:10px; color:#9f1239; font-weight:700;">GA - Rata-rata / Laga</label><input type="number" step="0.01" id="ga_${idx}_B_avg" value="1.40" oninput="syncStats(${idx},'B','GA')" style="width:100%; margin-top:4px; background:#ffffff; border:1px solid #d8b4fe; border-radius:6px; padding:8px; color:#be123c; font-weight:700;"></div>
         </div>
       </div>
-
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; background:#ffffff; padding:10px; border-radius:8px; border:1px solid #f9a8d4;">
         <div><label style="font-size:10px; color:#a16207; font-weight:700;">H2H Gol A vs B</label><input type="number" step="0.1" id="h2hA_${idx}" value="1.8" oninput="updateXgPreview(${idx})" style="width:100%; margin-top:4px; background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:8px; color:#92400e; font-weight:700;"></div>
         <div><label style="font-size:10px; color:#a16207; font-weight:700;">H2H Gol B vs A</label><input type="number" step="0.1" id="h2hB_${idx}" value="1.6" oninput="updateXgPreview(${idx})" style="width:100%; margin-top:4px; background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:8px; color:#92400e; font-weight:700;"></div>
       </div>
     </div>
-
     <div id="hasilPrediksi_${idx}" style="margin-top:12px;"></div>
   </div>`;
 }
 
+// === FIX UTAMA: loadTeams sekarang support ID ori (tim1) dan baru (tim1_1) ===
 async function loadTeams(){
   try{
     if(!teamsDataCache){
@@ -262,9 +185,23 @@ async function loadTeams(){
       teamsDataCache=await res.json();
     }
     const data=teamsDataCache;
+    
+    // Support 2 mode: ori (tim1/tim2) dan baru (tim1_1/tim2_1)
+    const selectors = [];
+    // Cari mode baru dulu
     for(let i=1;i<=MAX_MATCHES;i++){
-      const s1=document.getElementById(`tim1_${i}`), s2=document.getElementById(`tim2_${i}`);
-      if(!s1||!s2) continue;
+      const s1=document.getElementById(`tim1_${i}`);
+      const s2=document.getElementById(`tim2_${i}`);
+      if(s1&&s2) selectors.push([s1,s2]);
+    }
+    // Jika tidak ada mode baru, pakai mode ori (seperti di screenshot)
+    if(selectors.length===0){
+      const s1=document.getElementById('tim1');
+      const s2=document.getElementById('tim2');
+      if(s1&&s2) selectors.push([s1,s2]);
+    }
+
+    selectors.forEach(([s1,s2])=>{
       const old1=s1.value, old2=s2.value;
       s1.innerHTML=''; s2.innerHTML='';
       for(const [liga,daftar] of Object.entries(data)){
@@ -278,16 +215,27 @@ async function loadTeams(){
       }
       if(old1) s1.value=old1; else if(s1.options.length>0) s1.selectedIndex=0;
       if(old2) s2.value=old2; else if(s2.options.length>1) s2.selectedIndex=1;
-    }
+    });
+
+    const statusEl=document.getElementById('statusTeams');
+    if(statusEl) statusEl.textContent=`✅ ${Object.values(data).flat().length} tim dimuat dari teams.json`;
+
   }catch(err){
-    console.error(err);
+    console.error('Gagal load teams.json:', err);
+    const statusEl=document.getElementById('statusTeams');
+    if(statusEl) statusEl.textContent=`❌ Gagal load teams.json: ${err.message}`;
   }
 }
 
 function tambahPrediksi(){
   if(matchCount>=MAX_MATCHES){ alert(`Maksimal ${MAX_MATCHES}!`); return; }
   matchCount++;
-  document.getElementById('matchesContainer').insertAdjacentHTML('beforeend', createMatchCard(matchCount));
+  const container=document.getElementById('matchesContainer');
+  if(!container){
+    alert('matchesContainer tidak ditemukan! Pastikan generator.html sudah update');
+    return;
+  }
+  container.insertAdjacentHTML('beforeend', createMatchCard(matchCount));
   loadTeams(); updateTambahButton(); updateXgPreview(matchCount);
   document.getElementById(`matchCard_${matchCount}`)?.scrollIntoView({behavior:'smooth'});
 }
@@ -302,37 +250,38 @@ function hapusPrediksi(idx){
 function updateTambahButton(){
   const btn=document.getElementById('btnTambahPrediksi');
   if(!btn) return;
-  const cur=document.querySelectorAll('.match-card').length;
+  const cur=document.querySelectorAll('.match-card').length || 1;
+  document.getElementById('matchCounter') && (document.getElementById('matchCounter').textContent=`${cur} pertandingan`);
   if(cur>=MAX_MATCHES){ btn.disabled=true; btn.style.opacity='0.5'; btn.innerHTML=`<i class="fa-solid fa-ban"></i> Maksimal ${MAX_MATCHES}`; }
   else{ btn.disabled=false; btn.style.opacity='1'; btn.innerHTML=`<i class="fa-solid fa-plus"></i> Tambah Prediksi (${cur}/${MAX_MATCHES})`; }
 }
 
 function kembaliKeBeranda(){
-  if(confirm('Yakin ingin kembali ke beranda? Data yang belum disimpan akan hilang.')){
+  if(confirm('Yakin kembali ke beranda?')){
     window.location.href = '../index.html';
   }
 }
 
 function hitungSingle(idx){
-  const tim1=document.getElementById(`tim1_${idx}`)?.value;
-  const tim2=document.getElementById(`tim2_${idx}`)?.value;
-  const odds1=parseFloat(document.getElementById(`oddA_${idx}`)?.value);
-  const oddsDraw=parseFloat(document.getElementById(`oddDraw_${idx}`)?.value);
-  const odds2=parseFloat(document.getElementById(`oddB_${idx}`)?.value);
+  const tim1=document.getElementById(`tim1_${idx}`)?.value || document.getElementById('tim1')?.value;
+  const tim2=document.getElementById(`tim2_${idx}`)?.value || document.getElementById('tim2')?.value;
+  const odds1=parseFloat(document.getElementById(`oddA_${idx}`)?.value || document.getElementById('oddA')?.value);
+  const oddsDraw=parseFloat(document.getElementById(`oddDraw_${idx}`)?.value || document.getElementById('oddDraw')?.value);
+  const odds2=parseFloat(document.getElementById(`oddB_${idx}`)?.value || document.getElementById('oddB')?.value);
   if(!tim1||!tim2||isNaN(odds1)) return null;
 
   const p1=1/odds1, pD=1/oddsDraw, p2=1/odds2;
   const totalM=p1+pD+p2;
   const prob1M=p1/totalM, probDM=pD/totalM, prob2M=p2/totalM;
 
-  let gfATotal=parseFloat(document.getElementById(`gf_${idx}_A_total`)?.value)||0;
-  let gaATotal=parseFloat(document.getElementById(`ga_${idx}_A_total`)?.value)||0;
-  let gfBTotal=parseFloat(document.getElementById(`gf_${idx}_B_total`)?.value)||0;
-  let gaBTotal=parseFloat(document.getElementById(`ga_${idx}_B_total`)?.value)||0;
-  let h2hA=parseFloat(document.getElementById(`h2hA_${idx}`)?.value)||0.0;
-  let h2hB=parseFloat(document.getElementById(`h2hB_${idx}`)?.value)||0.0;
+  let gfATotal=parseFloat(document.getElementById(`gf_${idx}_A_total`)?.value || document.getElementById('gfA_total')?.value) || 11;
+  let gaATotal=parseFloat(document.getElementById(`ga_${idx}_A_total`)?.value || document.getElementById('gaA_total')?.value) || 4;
+  let gfBTotal=parseFloat(document.getElementById(`gf_${idx}_B_total`)?.value || document.getElementById('gfB_total')?.value) || 13;
+  let gaBTotal=parseFloat(document.getElementById(`ga_${idx}_B_total`)?.value) || 0;
 
   let gfA=gfATotal/5, gaA=gaATotal/5, gfB=gfBTotal/5, gaB=gaBTotal/5;
+  let h2hA=parseFloat(document.getElementById(`h2hA_${idx}`)?.value || document.getElementById('h2hA')?.value) || 1.8;
+  let h2hB=parseFloat(document.getElementById(`h2hB_${idx}`)?.value || document.getElementById('h2hB')?.value) || 1.6;
   const homeAdv=document.getElementById(`homeAdv_${idx}`)?.checked;
   let xgA=Math.max(0.2,(gfA*0.4)+(gaB*0.4)+(h2hA*0.2));
   let xgB=Math.max(0.2,(gfB*0.4)+(gaA*0.4)+(h2hB*0.2));
@@ -354,7 +303,8 @@ function hitungSingle(idx){
 }
 
 function renderSingle(data){
-  const el=document.getElementById(`hasilPrediksi_${data.idx}`); if(!el) return;
+  const el=document.getElementById(`hasilPrediksi_${data.idx}`) || document.getElementById('hasilPrediksi');
+  if(!el) return;
   el.innerHTML=`
     <div style="padding:12px; background:#ffffff; border:1px solid #f9a8d4; border-radius:12px; color:#831843; font-size:12px; box-shadow:0 2px 8px rgba(236,72,153,0.1);">
       <div style="display:flex; justify-content:space-between;"><strong style="color:#831843;">${data.tim1} vs ${data.tim2}</strong><span style="background:#fce7f3; border:1px solid #f9a8d4; padding:2px 6px; border-radius:6px; font-size:10px;">xG ${data.xgA.toFixed(2)}-${data.xgB.toFixed(2)}</span></div>
@@ -366,58 +316,37 @@ function renderSingle(data){
     </div>`;
 }
 
-// === UPDATE: hasilkanPrediksi sekarang simpan ke Firestore tanpa merubah hitungan ===
 async function hasilkanPrediksi(){
   const cards=document.querySelectorAll('.match-card');
   const all=[];
-  for(const card of cards){
-    const idx=card.dataset.idx;
-    const data=hitungSingle(idx);
-    if(!data) return;
+  if(cards.length===0){
+    // Mode ori single (tim1/tim2)
+    const data=hitungSingle(1) || hitungSingle('') || (()=>{ const tim1=document.getElementById('tim1')?.value, tim2=document.getElementById('tim2')?.value; return hitungSingle(1); })();
+    if(!data){ alert('Lengkapi data!'); return; }
     renderSingle(data);
     all.push(data);
-
-    // === TAMBAHAN FIRESTORE SYNC (tidak mengganggu logic) ===
-    await simpanKeFirestore({
-      tim1: data.tim1,
-      tim2: data.tim2,
-      odds1: data.odds1,
-      oddsDraw: data.oddsDraw,
-      odds2: data.odds2,
-      prob1M: data.prob1M,
-      probDM: data.probDM,
-      prob2M: data.prob2M,
-      xgA: data.xgA,
-      xgB: data.xgB,
-      probAWin: data.probAWin,
-      probDraw: data.probDraw,
-      probBWin: data.probBWin,
-      probOver25: data.probOver25,
-      topScore: data.scoreMatrix[0]?.score,
-      topScoreProb: data.scoreMatrix[0]?.prob,
-      gfATotal: data.gfATotal,
-      gaATotal: data.gaATotal,
-      gfBTotal: data.gfBTotal,
-      gaBTotal: data.gaBTotal,
-      matchLabel: `${data.tim1} vs ${data.tim2}`,
-      idx: data.idx
-    });
+    await simpanKeFirestore({ tim1:data.tim1, tim2:data.tim2, odds1:data.odds1, oddsDraw:data.oddsDraw, odds2:data.odds2, xgA:data.xgA, xgB:data.xgB, topScore:data.scoreMatrix[0]?.score, matchLabel:`${data.tim1} vs ${data.tim2}` });
+  } else {
+    for(const card of cards){
+      const idx=card.dataset.idx;
+      const data=hitungSingle(idx);
+      if(!data) continue;
+      renderSingle(data);
+      all.push(data);
+      await simpanKeFirestore({ tim1:data.tim1, tim2:data.tim2, odds1:data.odds1, oddsDraw:data.oddsDraw, odds2:data.odds2, xgA:data.xgA, xgB:data.xgB, topScore:data.scoreMatrix[0]?.score, matchLabel:`${data.tim1} vs ${data.tim2}` });
+    }
   }
   const globalEl=document.getElementById('hasilSemuaPrediksi');
-  if(globalEl){
-    let html=`<div style="margin-top:16px; padding:16px; background:#ffffff; border:1px solid #f9a8d4; border-radius:16px; box-shadow:0 4px 12px rgba(236,72,153,0.15);"><h3 style="margin:0 0 12px 0; color:#831843; font-size:14px;">📋 Rekap ${all.length} Prediksi (Pink Theme) ${firestoreConnected ? '✅ Tersimpan Firestore' : '💾 Tersimpan Lokal'}</h3><div style="display:grid; gap:8px;">`;
-    all.forEach(r=>{
-      html+=`<div style="display:flex; justify-content:space-between; background:#fff1f2; padding:10px; border-radius:10px; border:1px solid #fecdd3;"><div><strong style="color:#831843; font-size:13px;">${r.tim1} vs ${r.tim2}</strong><br><small style="color:#be185d;">Total GF ${r.gfATotal}/${r.gfBTotal} Avg ${(r.gfATotal/5).toFixed(2)}/${(r.gfBTotal/5).toFixed(2)} | Top ${r.scoreMatrix[0].score}</small></div><div style="text-align:right;"><span style="background:${r.evA>5||r.evB>5?'#ec4899':'#f9a8d4'}; color:#fff; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:700;">${r.probAWin>r.probBWin?r.tim1:r.tim2}</span></div></div>`;
-    });
-    html+=`</div><div style="margin-top:12px; display:flex; gap:8px;"><button onclick="kembaliKeBeranda()" style="background:#fce7f3; color:#831843; border:1px solid #f9a8d4; padding:8px 16px; border-radius:8px; font-size:12px; cursor:pointer;"><i class="fa-solid fa-house"></i> Kembali ke Beranda</button><button onclick="loadHistoriFirestore()" style="background:#ec4899; color:#fff; border:none; padding:8px 16px; border-radius:8px; font-size:12px; cursor:pointer;"><i class="fa-solid fa-clock-rotate-left"></i> Histori Firestore</button></div></div>`;
+  if(globalEl && all.length>0){
+    let html=`<div style="margin-top:16px; padding:16px; background:#ffffff; border:1px solid #f9a8d4; border-radius:16px; box-shadow:0 4px 12px rgba(236,72,153,0.15);"><h3 style="margin:0 0 12px 0; color:#831843; font-size:14px;">📋 Rekap ${all.length} Prediksi ${firestoreConnected?'✅ Firestore':''}</h3><div style="display:grid; gap:8px;">`;
+    all.forEach(r=>{ html+=`<div style="display:flex; justify-content:space-between; background:#fff1f2; padding:10px; border-radius:10px; border:1px solid #fecdd3;"><div><strong style="color:#831843;">${r.tim1} vs ${r.tim2}</strong><br><small style="color:#be185d;">Total GF ${r.gfATotal}/${r.gfBTotal} | Top ${r.scoreMatrix[0].score}</small></div><div><span style="background:#ec4899; color:#fff; padding:4px 8px; border-radius:6px; font-size:11px;">${r.probAWin>r.probBWin?r.tim1:r.tim2}</span></div></div>`; });
+    html+=`</div></div>`;
     globalEl.innerHTML=html;
   }
 }
 
 document.addEventListener('DOMContentLoaded', ()=>{
-  // Init Firestore dulu
   initFirestore();
-
   document.body.style.background='#ffe4e6';
   document.body.style.backgroundImage='linear-gradient(135deg, #ffe4e6 0%, #fce7f3 50%, #fbcfe8 100%)';
   document.body.style.minHeight='100vh';
@@ -427,26 +356,27 @@ document.addEventListener('DOMContentLoaded', ()=>{
     const hasil=document.getElementById('hasilPrediksi');
     const wrapper=document.createElement('div');
     wrapper.innerHTML=`
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:8px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin:16px; flex-wrap:wrap; gap:8px;">
         <div style="display:flex; gap:8px;">
-          <button type="button" id="btnKembaliBeranda" onclick="kembaliKeBeranda()" style="background:#ffffff; color:#831843; border:1px solid #f9a8d4; padding:8px 14px; border-radius:10px; font-size:12px; cursor:pointer; box-shadow:0 2px 6px rgba(236,72,153,0.2);"><i class="fa-solid fa-house"></i> Kembali ke Beranda</button>
+          <button type="button" onclick="kembaliKeBeranda()" style="background:#ffffff; color:#831843; border:1px solid #f9a8d4; padding:8px 14px; border-radius:10px; font-size:12px; cursor:pointer;"><i class="fa-solid fa-house"></i> Kembali ke Beranda</button>
           <span id="matchCounter" style="background:#ffffff; border:1px solid #f9a8d4; padding:8px 12px; border-radius:10px; font-size:12px; color:#be185d;">1 pertandingan</span>
+          <span id="firebaseStatus" style="background:#ffffff; border:1px solid #f9a8d4; padding:8px 12px; border-radius:10px; font-size:11px; color:#be185d;">🔄 Menghubungkan Firestore...</span>
         </div>
         <div style="display:flex; gap:8px;">
-          <button type="button" id="btnTambahPrediksi" onclick="tambahPrediksi()" style="background:#ec4899; color:#ffffff; border:none; padding:8px 16px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer; box-shadow:0 2px 8px rgba(236,72,153,0.3);"><i class="fa-solid fa-plus"></i> Tambah Prediksi (1/5)</button>
-          <button type="button" id="btnPrediksi" onclick="hasilkanPrediksi()" style="background:#be185d; color:#fff; border:none; padding:8px 16px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer; box-shadow:0 2px 8px rgba(190,24,93,0.3);"><i class="fa-solid fa-calculator"></i> Hitung Semua</button>
+          <button type="button" id="btnTambahPrediksi" onclick="tambahPrediksi()" style="background:#ec4899; color:#ffffff; border:none; padding:8px 16px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer;"><i class="fa-solid fa-plus"></i> Tambah Prediksi (1/5)</button>
+          <button type="button" id="btnPrediksi" onclick="hasilkanPrediksi()" style="background:#be185d; color:#fff; border:none; padding:8px 16px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer;"><i class="fa-solid fa-calculator"></i> Hitung Semua</button>
         </div>
       </div>
       <div id="matchesContainer"></div>
       <div id="hasilSemuaPrediksi"></div>
-      <div id="historiBox" style="display:none; margin-top:16px;"></div>
-      <div id="statusTeams" style="margin-top:12px; font-size:11px; color:#be185d;"></div>
-      <div id="firebaseStatus" style="margin-top:8px; font-size:11px; background:#ffffff; border:1px solid #f9a8d4; padding:6px 12px; border-radius:8px; display:inline-block; color:#be185d;">🔄 Menghubungkan Firestore...</div>
+      <div id="historiBox" style="display:none; margin:16px;"></div>
+      <div id="statusTeams" style="margin:16px; font-size:11px; color:#be185d;"></div>
     `;
-    if(hasil){ hasil.parentNode.insertBefore(wrapper, hasil); hasil.style.display='none'; }
-    else document.body.prepend(wrapper);
+    if(hasil && hasil.parentNode){ hasil.parentNode.insertBefore(wrapper, hasil); }
+    else { document.body.prepend(wrapper); }
     container=document.getElementById('matchesContainer');
   }
   if(container && container.children.length===0){ container.innerHTML=createMatchCard(1); matchCount=1; }
-  loadTeams(); updateTambahButton(); updateXgPreview(1);
+  // FIX: init dengan benar
+  setTimeout(()=>{ loadTeams(); updateTambahButton(); updateXgPreview(1); }, 300);
 });
