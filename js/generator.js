@@ -1,6 +1,6 @@
 // =========================================================
-// v3.6.1 FIX - Teams.json tidak bisa + Firebase SDK tidak ada
-// FIX untuk screenshot kamu 0/5 dan dropdown kosong
+// v3.7.0 - INTEGRASI OVER/UNDER ADVANCED (POISSON)
+// Semua logic asli v3.6.1 dipertahankan 100%
 // =========================================================
 
 // === FIREBASE CONFIG - GANTI ===
@@ -21,7 +21,6 @@ function initFirestore() {
     if (typeof firebase === 'undefined') {
       console.warn('Firebase SDK belum ada - coba load via CDN dinamis');
       updateFirebaseStatus('🟡 Demo mode (Firebase SDK tidak ada)', '#fef3c7');
-      // Coba load SDK secara dinamis
       loadFirebaseSDK();
       return;
     }
@@ -29,6 +28,8 @@ function initFirestore() {
     db = firebase.firestore();
     firestoreConnected = true;
     updateFirebaseStatus(`🟢 Firestore: ${firebaseConfig.projectId}`, '#dcfce7');
+    // FIX: Panggil loadTeams setelah firestore init jika diperlukan
+    setTimeout(() => loadTeams(), 500);
   } catch (err) {
     updateFirebaseStatus(`🔴 ${err.message}`, '#fee2e2');
   }
@@ -67,7 +68,7 @@ async function simpanKeFirestore(data) {
     await db.collection('predictions').add({
       ...data,
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      version: 'v3.6.1-fix'
+      version: 'v3.7.0-ou-integrated'
     });
   } catch (err) {
     console.error(err);
@@ -140,6 +141,13 @@ function createMatchCard(idx){
       <div><label style="font-size:11px; color:#9d174d;">Odds Seri (X)</label><input type="number" step="0.01" id="oddDraw_${idx}" value="3.60" style="width:100%; margin-top:4px; background:#fff7f8; border:1px solid #f9a8d4; border-radius:8px; padding:8px; color:#d97706; font-weight:700; text-align:center;"></div>
       <div><label style="font-size:11px; color:#9d174d;">Odds B (2)</label><input type="number" step="0.01" id="oddB_${idx}" value="3.20" style="width:100%; margin-top:4px; background:#fff7f8; border:1px solid #f9a8d4; border-radius:8px; padding:8px; color:#7c3aed; font-weight:700; text-align:center;"></div>
     </div>
+    
+    <!-- [BARU] Input Odds Over/Under -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; background:#f0fdf4; padding:10px; border-radius:10px; border:1px solid #bbf7d0;">
+      <div><label style="font-size:11px; color:#166534; font-weight:600;">Odds Over 2.5</label><input type="number" step="0.01" id="oddOver_${idx}" value="1.90" style="width:100%; margin-top:4px; background:#ffffff; border:1px solid #86efac; border-radius:8px; padding:8px; color:#15803d; font-weight:700; text-align:center;"></div>
+      <div><label style="font-size:11px; color:#166534; font-weight:600;">Odds Under 2.5</label><input type="number" step="0.01" id="oddUnder_${idx}" value="1.95" style="width:100%; margin-top:4px; background:#ffffff; border:1px solid #86efac; border-radius:8px; padding:8px; color:#15803d; font-weight:700; text-align:center;"></div is="div">
+    </div>
+
     <div style="background:#fdf2f8; padding:12px; border-radius:12px; border:1px solid #fbcfe8;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
         <span style="font-size:12px; font-weight:700; color:#831843;"><i class="fa-solid fa-chart-simple" style="color:#ec4899;"></i> Statistik Manual (Total & Rata-rata)</span>
@@ -176,7 +184,6 @@ function createMatchCard(idx){
   </div>`;
 }
 
-// === FIX UTAMA: loadTeams sekarang support ID ori (tim1) dan baru (tim1_1) ===
 async function loadTeams(){
   try{
     if(!teamsDataCache){
@@ -186,15 +193,12 @@ async function loadTeams(){
     }
     const data=teamsDataCache;
     
-    // Support 2 mode: ori (tim1/tim2) dan baru (tim1_1/tim2_1)
     const selectors = [];
-    // Cari mode baru dulu
     for(let i=1;i<=MAX_MATCHES;i++){
       const s1=document.getElementById(`tim1_${i}`);
       const s2=document.getElementById(`tim2_${i}`);
       if(s1&&s2) selectors.push([s1,s2]);
     }
-    // Jika tidak ada mode baru, pakai mode ori (seperti di screenshot)
     if(selectors.length===0){
       const s1=document.getElementById('tim1');
       const s2=document.getElementById('tim2');
@@ -268,6 +272,11 @@ function hitungSingle(idx){
   const odds1=parseFloat(document.getElementById(`oddA_${idx}`)?.value || document.getElementById('oddA')?.value);
   const oddsDraw=parseFloat(document.getElementById(`oddDraw_${idx}`)?.value || document.getElementById('oddDraw')?.value);
   const odds2=parseFloat(document.getElementById(`oddB_${idx}`)?.value || document.getElementById('oddB')?.value);
+  
+  // [BARU] Ambil Odds Over/Under
+  const oddOver=parseFloat(document.getElementById(`oddOver_${idx}`)?.value || 1.90);
+  const oddUnder=parseFloat(document.getElementById(`oddUnder_${idx}`)?.value || 1.95);
+
   if(!tim1||!tim2||isNaN(odds1)) return null;
 
   const p1=1/odds1, pD=1/oddsDraw, p2=1/odds2;
@@ -299,12 +308,14 @@ function hitungSingle(idx){
   probAWin/=totalProb; probDraw/=totalProb; probBWin/=totalProb; probOver25/=totalProb;
   scoreMatrix.forEach(s=>s.prob/=totalProb); scoreMatrix.sort((a,b)=>b.prob-a.prob);
 
-  return {idx, tim1,tim2, odds1,oddsDraw,odds2, prob1M,probDM,prob2M, xgA,xgB, probAWin,probDraw,probBWin, probOver25, scoreMatrix, evA:(probAWin*odds1-1)*100, evD:(probDraw*oddsDraw-1)*100, evB:(probBWin*odds2-1)*100, gfATotal, gaATotal, gfBTotal, gaBTotal};
+  return {idx, tim1,tim2, odds1,oddsDraw,odds2, oddOver, oddUnder, prob1M,probDM,prob2M, xgA,xgB, probAWin,probDraw,probBWin, probOver25, scoreMatrix, evA:(probAWin*odds1-1)*100, evD:(probDraw*oddsDraw-1)*100, evB:(probBWin*odds2-1)*100, gfATotal, gaATotal, gfBTotal, gaBTotal};
 }
 
 function renderSingle(data){
   const el=document.getElementById(`hasilPrediksi_${data.idx}`) || document.getElementById('hasilPrediksi');
   if(!el) return;
+  
+  // Render hasil 1X2 asli
   el.innerHTML=`
     <div style="padding:12px; background:#ffffff; border:1px solid #f9a8d4; border-radius:12px; color:#831843; font-size:12px; box-shadow:0 2px 8px rgba(236,72,153,0.1);">
       <div style="display:flex; justify-content:space-between;"><strong style="color:#831843;">${data.tim1} vs ${data.tim2}</strong><span style="background:#fce7f3; border:1px solid #f9a8d4; padding:2px 6px; border-radius:6px; font-size:10px;">xG ${data.xgA.toFixed(2)}-${data.xgB.toFixed(2)}</span></div>
@@ -314,13 +325,15 @@ function renderSingle(data){
       </div>
       <div style="margin-top:8px; font-size:11px; display:flex; justify-content:space-between; color:#9d174d;"><span>Top: <strong style="color:#db2777;">${data.scoreMatrix[0].score}</strong> ${(data.scoreMatrix[0].prob*100).toFixed(1)}%</span><span>Over 2.5 ${(data.probOver25*100).toFixed(1)}%</span></div>
     </div>`;
+
+  // [BARU] Suntikkan Card Grid Over/Under di bawah hasil 1X2
+  renderOverUnderCard(data.idx, [2.5], [data.oddOver], [data.oddUnder]);
 }
 
 async function hasilkanPrediksi(){
   const cards=document.querySelectorAll('.match-card');
   const all=[];
   if(cards.length===0){
-    // Mode ori single (tim1/tim2)
     const data=hitungSingle(1) || hitungSingle('') || (()=>{ const tim1=document.getElementById('tim1')?.value, tim2=document.getElementById('tim2')?.value; return hitungSingle(1); })();
     if(!data){ alert('Lengkapi data!'); return; }
     renderSingle(data);
@@ -377,6 +390,104 @@ document.addEventListener('DOMContentLoaded', ()=>{
     container=document.getElementById('matchesContainer');
   }
   if(container && container.children.length===0){ container.innerHTML=createMatchCard(1); matchCount=1; }
-  // FIX: init dengan benar
   setTimeout(()=>{ loadTeams(); updateTambahButton(); updateXgPreview(1); }, 300);
 });
+
+
+// =========================================================
+// [BARU] MODUL OVER/UNDER ADVANCED (v3.1)
+// Disuntikkan di bagian bawah agar tidak mengganggu logic di atas
+// =========================================================
+
+function ou_oddsToProb(odds) {
+  const validOdds = parseFloat(odds);
+  if (isNaN(validOdds) || validOdds <= 1.0) return 0;
+  return 1 / validOdds;
+}
+
+function ou_poissonProb(k, lambda) {
+  if (lambda <= 0) return 0;
+  let fact = 1;
+  for (let i = 2; i <= k; i++) fact *= i;
+  return (Math.pow(lambda, k) * Math.exp(-lambda)) / fact;
+}
+
+function ou_probOver(line, lambda) {
+  const threshold = Math.floor(line) + 1;
+  let probUnder = 0;
+  for (let k = 0; k < threshold; k++) {
+    probUnder += ou_poissonProb(k, lambda);
+  }
+  return 1 - probUnder;
+}
+
+function ou_getFairProbsPerLine(oddsOver, oddsUnder) {
+  const pOverRaw = ou_oddsToProb(oddsOver);
+  const pUnderRaw = ou_oddsToProb(oddsUnder);
+  if (pOverRaw === 0 || pUnderRaw === 0) return { pOverFair: 0.5, pUnderFair: 0.5, margin: 0 };
+  const sum = pOverRaw + pUnderRaw;
+  return { pOverFair: pOverRaw / sum, pUnderFair: pUnderRaw / sum, margin: sum - 1 };
+}
+
+function ou_findLambdaFromProb(targetProbOver, line) {
+  let bestLambda = 2.5;
+  let minError = 999;
+  if (isNaN(targetProbOver) || targetProbOver <= 0 || targetProbOver >= 1) return bestLambda;
+  for (let lambda = 0.5; lambda <= 6.0; lambda += 0.01) {
+    const p = ou_probOver(line, lambda);
+    const error = Math.abs(p - targetProbOver);
+    if (error < minError) { minError = error; bestLambda = lambda; }
+  }
+  return bestLambda;
+}
+
+function ou_buildDistribution(lines, oddsOver, oddsUnder) {
+  if (!Array.isArray(lines) || lines.length === 0) return { fairData: [], main: null, lambda: 2.5 };
+  const fairData = lines.map((line, i) => ({ line: parseFloat(line), ...ou_getFairProbsPerLine(oddsOver[i], oddsUnder[i]) }));
+  const main = fairData.find(d => d.line === 2.5) || fairData[0];
+  const lambda = main ? ou_findLambdaFromProb(main.pOverFair, main.line) : 2.5;
+  return { fairData, main, lambda };
+}
+
+function renderOverUnderCard(idx, lines, oddsOver, oddsUnder) {
+  const el = document.getElementById(`hasilPrediksi_${idx}`) || document.getElementById('hasilPrediksi');
+  if (!el) return;
+
+  const result = ou_buildDistribution(lines, oddsOver, oddsUnder);
+  if (!result || !result.main) return;
+
+  const lambda = result.lambda.toFixed(2);
+  const margin = (result.main.margin * 100).toFixed(2);
+
+  let linesHtml = '';
+  result.fairData.forEach(d => {
+    linesHtml += `<div style="background:#f0fdf4; padding:8px; border-radius:8px; border-left:4px solid #22c55e; margin-top:6px;">
+      <div style="font-size:11px; font-weight:700; color:#15803d;">Over ${d.line}: ${(d.pOverFair*100).toFixed(1)}%</div>
+      <div style="font-size:10px; color:#166534;">Under ${d.line}: ${(d.pUnderFair*100).toFixed(1)}%</div>
+    </div>`;
+  });
+
+  let distHtml = '';
+  for(let k=0; k<=5; k++) {
+    const prob = (ou_poissonProb(k, result.lambda) * 100).toFixed(1);
+    distHtml += `<div style="background:#fefce8; padding:6px; border-radius:6px; border:1px solid #fde047; text-align:center;">
+      <div style="font-size:10px; color:#854d0e; font-weight:700;">${k} Gol</div>
+      <div style="font-size:12px; color:#a16207; font-weight:800;">${prob}%</div>
+    </div>`;
+  }
+
+  const ouHtml = `
+    <div style="margin-top:12px; padding:12px; background:#ffffff; border:1px solid #bbf7d0; border-radius:12px; box-shadow:0 2px 8px rgba(34,197,94,0.1);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <strong style="color:#15803d; font-size:13px;"><i class="fa-solid fa-chart-pie"></i> Analisis Over/Under</strong>
+        <span style="background:#dcfce7; color:#166534; padding:2px 8px; border-radius:6px; font-size:10px; font-weight:700;">λ: ${lambda} | Margin: ${margin}%</span>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+        <div>${linesHtml}</div>
+        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px;">${distHtml}</div>
+      </div>
+    </div>
+  `;
+
+  el.insertAdjacentHTML('beforeend', ouHtml);
+}
