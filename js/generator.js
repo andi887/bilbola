@@ -1,9 +1,8 @@
 // =========================================================
-// v3.7.0 - INTEGRASI OVER/UNDER ADVANCED (POISSON)
-// Semua logic asli v3.6.1 dipertahankan 100%
+// v3.8.0 - INTEGRASI OVER/UNDER 8 LINE (FULL OPTIONS)
+// Semua logic asli dipertahankan 100%
 // =========================================================
 
-// === FIREBASE CONFIG - GANTI ===
 const firebaseConfig = {
   apiKey: "AIzaSyXXXX-GANTI",
   authDomain: "parlaypribadi-XXXX.firebaseapp.com",
@@ -28,7 +27,6 @@ function initFirestore() {
     db = firebase.firestore();
     firestoreConnected = true;
     updateFirebaseStatus(`🟢 Firestore: ${firebaseConfig.projectId}`, '#dcfce7');
-    // FIX: Panggil loadTeams setelah firestore init jika diperlukan
     setTimeout(() => loadTeams(), 500);
   } catch (err) {
     updateFirebaseStatus(`🔴 ${err.message}`, '#fee2e2');
@@ -68,7 +66,7 @@ async function simpanKeFirestore(data) {
     await db.collection('predictions').add({
       ...data,
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      version: 'v3.7.0-ou-integrated'
+      version: 'v3.8.0-ou-8lines'
     });
   } catch (err) {
     console.error(err);
@@ -76,7 +74,7 @@ async function simpanKeFirestore(data) {
 }
 
 // =========================================================
-// LOGIC ORI v3.5 - TETAP 100%
+// LOGIC ORI - TETAP 100%
 // =========================================================
 let matchCount = 1;
 const MAX_MATCHES = 5;
@@ -122,7 +120,25 @@ function updateXgPreview(idx){
   if(preview) preview.innerHTML = `xG: <span style="color:#db2777;">${xgA.toFixed(2)}</span> - <span style="color:#7c3aed;">${xgB.toFixed(2)}</span>`;
 }
 
+// === 8 LINE OVER/UNDER CONFIG ===
+const OU_LINES = [1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0];
+
 function createMatchCard(idx){
+  // Generate 8-line OU inputs dynamically
+  let ouInputsHtml = '';
+  OU_LINES.forEach(line => {
+    const suffix = line.toString().replace('.', '');
+    ouInputsHtml += `
+      <div style="background:#ffffff; padding:6px; border-radius:6px; border:1px solid #bbf7d0;">
+        <div style="font-size:10px; font-weight:700; color:#15803d; text-align:center; margin-bottom:4px;">Line ${line}</div>
+        <div style="display:flex; gap:4px;">
+          <input type="number" step="0.01" id="ou_o_${suffix}_${idx}" placeholder="Over" style="width:50%; background:#f0fdf4; border:1px solid #86efac; border-radius:4px; padding:4px; font-size:11px; font-weight:700; color:#15803d; text-align:center;">
+          <input type="number" step="0.01" id="ou_u_${suffix}_${idx}" placeholder="Under" style="width:50%; background:#fef2f2; border:1px solid #fca5a5; border-radius:4px; padding:4px; font-size:11px; font-weight:700; color:#b91c1c; text-align:center;">
+        </div>
+      </div>
+    `;
+  });
+
   return `
   <div id="matchCard_${idx}" class="match-card" data-idx="${idx}" style="margin-bottom:20px; padding:16px; border:1px solid #f9a8d4; border-radius:16px; background:#ffffff; box-shadow:0 4px 12px rgba(236,72,153,0.15); position:relative;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
@@ -132,20 +148,26 @@ function createMatchCard(idx){
         <span style="background:#fce7f3; border:1px solid #f9a8d4; padding:4px 8px; border-radius:8px; font-size:11px; color:#be185d;">#${idx}/5</span>
       </div>
     </div>
+    
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
       <div><label style="font-size:11px; color:#9d174d; font-weight:600;">Tuan Rumah (Tim 1)</label><select id="tim1_${idx}" style="width:100%; margin-top:4px; background:#fff1f2; border:1px solid #f9a8d4; border-radius:8px; padding:8px; color:#831843; font-weight:600;"></select></div>
       <div><label style="font-size:11px; color:#9d174d; font-weight:600;">Tamu (Tim 2)</label><select id="tim2_${idx}" style="width:100%; margin-top:4px; background:#fff1f2; border:1px solid #f9a8d4; border-radius:8px; padding:8px; color:#831843; font-weight:600;"></select></div>
     </div>
+    
     <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:14px;">
       <div><label style="font-size:11px; color:#9d174d;">Odds A (1)</label><input type="number" step="0.01" id="oddA_${idx}" value="2.10" style="width:100%; margin-top:4px; background:#fff7f8; border:1px solid #f9a8d4; border-radius:8px; padding:8px; color:#db2777; font-weight:700; text-align:center;"></div>
       <div><label style="font-size:11px; color:#9d174d;">Odds Seri (X)</label><input type="number" step="0.01" id="oddDraw_${idx}" value="3.60" style="width:100%; margin-top:4px; background:#fff7f8; border:1px solid #f9a8d4; border-radius:8px; padding:8px; color:#d97706; font-weight:700; text-align:center;"></div>
       <div><label style="font-size:11px; color:#9d174d;">Odds B (2)</label><input type="number" step="0.01" id="oddB_${idx}" value="3.20" style="width:100%; margin-top:4px; background:#fff7f8; border:1px solid #f9a8d4; border-radius:8px; padding:8px; color:#7c3aed; font-weight:700; text-align:center;"></div>
     </div>
-    
-    <!-- [BARU] Input Odds Over/Under -->
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; background:#f0fdf4; padding:10px; border-radius:10px; border:1px solid #bbf7d0;">
-      <div><label style="font-size:11px; color:#166534; font-weight:600;">Odds Over 2.5</label><input type="number" step="0.01" id="oddOver_${idx}" value="1.90" style="width:100%; margin-top:4px; background:#ffffff; border:1px solid #86efac; border-radius:8px; padding:8px; color:#15803d; font-weight:700; text-align:center;"></div>
-      <div><label style="font-size:11px; color:#166534; font-weight:600;">Odds Under 2.5</label><input type="number" step="0.01" id="oddUnder_${idx}" value="1.95" style="width:100%; margin-top:4px; background:#ffffff; border:1px solid #86efac; border-radius:8px; padding:8px; color:#15803d; font-weight:700; text-align:center;"></div is="div">
+
+    <!-- [BARU] GRID INPUT 8 LINE OVER/UNDER -->
+    <div style="background:#f0fdf4; padding:12px; border-radius:12px; border:1px solid #bbf7d0; margin-bottom:14px;">
+      <div style="font-size:12px; font-weight:700; color:#15803d; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+        <i class="fa-solid fa-chart-line"></i> Input Odds Over/Under (8 Line)
+      </div>
+      <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px;">
+        ${ouInputsHtml}
+      </div>
     </div>
 
     <div style="background:#fdf2f8; padding:12px; border-radius:12px; border:1px solid #fbcfe8;">
@@ -192,7 +214,6 @@ async function loadTeams(){
       teamsDataCache=await res.json();
     }
     const data=teamsDataCache;
-    
     const selectors = [];
     for(let i=1;i<=MAX_MATCHES;i++){
       const s1=document.getElementById(`tim1_${i}`);
@@ -223,7 +244,6 @@ async function loadTeams(){
 
     const statusEl=document.getElementById('statusTeams');
     if(statusEl) statusEl.textContent=`✅ ${Object.values(data).flat().length} tim dimuat dari teams.json`;
-
   }catch(err){
     console.error('Gagal load teams.json:', err);
     const statusEl=document.getElementById('statusTeams');
@@ -235,10 +255,7 @@ function tambahPrediksi(){
   if(matchCount>=MAX_MATCHES){ alert(`Maksimal ${MAX_MATCHES}!`); return; }
   matchCount++;
   const container=document.getElementById('matchesContainer');
-  if(!container){
-    alert('matchesContainer tidak ditemukan! Pastikan generator.html sudah update');
-    return;
-  }
+  if(!container){ alert('matchesContainer tidak ditemukan!'); return; }
   container.insertAdjacentHTML('beforeend', createMatchCard(matchCount));
   loadTeams(); updateTambahButton(); updateXgPreview(matchCount);
   document.getElementById(`matchCard_${matchCount}`)?.scrollIntoView({behavior:'smooth'});
@@ -261,9 +278,7 @@ function updateTambahButton(){
 }
 
 function kembaliKeBeranda(){
-  if(confirm('Yakin kembali ke beranda?')){
-    window.location.href = '../index.html';
-  }
+  if(confirm('Yakin kembali ke beranda?')){ window.location.href = '../index.html'; }
 }
 
 function hitungSingle(idx){
@@ -273,11 +288,17 @@ function hitungSingle(idx){
   const oddsDraw=parseFloat(document.getElementById(`oddDraw_${idx}`)?.value || document.getElementById('oddDraw')?.value);
   const odds2=parseFloat(document.getElementById(`oddB_${idx}`)?.value || document.getElementById('oddB')?.value);
   
-  // [BARU] Ambil Odds Over/Under
-  const oddOver=parseFloat(document.getElementById(`oddOver_${idx}`)?.value || 1.90);
-  const oddUnder=parseFloat(document.getElementById(`oddUnder_${idx}`)?.value || 1.95);
-
   if(!tim1||!tim2||isNaN(odds1)) return null;
+
+  // [BARU] Ambil 8 line Odds Over/Under
+  const lines = OU_LINES;
+  const oddsOver = [];
+  const oddsUnder = [];
+  lines.forEach(line => {
+    const suffix = line.toString().replace('.', '');
+    oddsOver.push(parseFloat(document.getElementById(`ou_o_${suffix}_${idx}`)?.value) || 0);
+    oddsUnder.push(parseFloat(document.getElementById(`ou_u_${suffix}_${idx}`)?.value) || 0);
+  });
 
   const p1=1/odds1, pD=1/oddsDraw, p2=1/odds2;
   const totalM=p1+pD+p2;
@@ -308,14 +329,13 @@ function hitungSingle(idx){
   probAWin/=totalProb; probDraw/=totalProb; probBWin/=totalProb; probOver25/=totalProb;
   scoreMatrix.forEach(s=>s.prob/=totalProb); scoreMatrix.sort((a,b)=>b.prob-a.prob);
 
-  return {idx, tim1,tim2, odds1,oddsDraw,odds2, oddOver, oddUnder, prob1M,probDM,prob2M, xgA,xgB, probAWin,probDraw,probBWin, probOver25, scoreMatrix, evA:(probAWin*odds1-1)*100, evD:(probDraw*oddsDraw-1)*100, evB:(probBWin*odds2-1)*100, gfATotal, gaATotal, gfBTotal, gaBTotal};
+  return {idx, tim1,tim2, odds1,oddsDraw,odds2, lines, oddsOver, oddsUnder, prob1M,probDM,prob2M, xgA,xgB, probAWin,probDraw,probBWin, probOver25, scoreMatrix, evA:(probAWin*odds1-1)*100, evD:(probDraw*oddsDraw-1)*100, evB:(probBWin*odds2-1)*100, gfATotal, gaATotal, gfBTotal, gaBTotal};
 }
 
 function renderSingle(data){
   const el=document.getElementById(`hasilPrediksi_${data.idx}`) || document.getElementById('hasilPrediksi');
   if(!el) return;
   
-  // Render hasil 1X2 asli
   el.innerHTML=`
     <div style="padding:12px; background:#ffffff; border:1px solid #f9a8d4; border-radius:12px; color:#831843; font-size:12px; box-shadow:0 2px 8px rgba(236,72,153,0.1);">
       <div style="display:flex; justify-content:space-between;"><strong style="color:#831843;">${data.tim1} vs ${data.tim2}</strong><span style="background:#fce7f3; border:1px solid #f9a8d4; padding:2px 6px; border-radius:6px; font-size:10px;">xG ${data.xgA.toFixed(2)}-${data.xgB.toFixed(2)}</span></div>
@@ -326,8 +346,8 @@ function renderSingle(data){
       <div style="margin-top:8px; font-size:11px; display:flex; justify-content:space-between; color:#9d174d;"><span>Top: <strong style="color:#db2777;">${data.scoreMatrix[0].score}</strong> ${(data.scoreMatrix[0].prob*100).toFixed(1)}%</span><span>Over 2.5 ${(data.probOver25*100).toFixed(1)}%</span></div>
     </div>`;
 
-  // [BARU] Suntikkan Card Grid Over/Under di bawah hasil 1X2
-  renderOverUnderCard(data.idx, [2.5], [data.oddOver], [data.oddUnder]);
+  // [BARU] Suntikkan Card Grid Over/Under 8 Line di bawah hasil 1X2
+  renderOverUnderCard(data.idx, data.lines, data.oddsOver, data.oddsUnder);
 }
 
 async function hasilkanPrediksi(){
@@ -336,16 +356,14 @@ async function hasilkanPrediksi(){
   if(cards.length===0){
     const data=hitungSingle(1) || hitungSingle('') || (()=>{ const tim1=document.getElementById('tim1')?.value, tim2=document.getElementById('tim2')?.value; return hitungSingle(1); })();
     if(!data){ alert('Lengkapi data!'); return; }
-    renderSingle(data);
-    all.push(data);
+    renderSingle(data); all.push(data);
     await simpanKeFirestore({ tim1:data.tim1, tim2:data.tim2, odds1:data.odds1, oddsDraw:data.oddsDraw, odds2:data.odds2, xgA:data.xgA, xgB:data.xgB, topScore:data.scoreMatrix[0]?.score, matchLabel:`${data.tim1} vs ${data.tim2}` });
   } else {
     for(const card of cards){
       const idx=card.dataset.idx;
       const data=hitungSingle(idx);
       if(!data) continue;
-      renderSingle(data);
-      all.push(data);
+      renderSingle(data); all.push(data);
       await simpanKeFirestore({ tim1:data.tim1, tim2:data.tim2, odds1:data.odds1, oddsDraw:data.oddsDraw, odds2:data.odds2, xgA:data.xgA, xgB:data.xgB, topScore:data.scoreMatrix[0]?.score, matchLabel:`${data.tim1} vs ${data.tim2}` });
     }
   }
@@ -395,8 +413,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
 
 // =========================================================
-// [BARU] MODUL OVER/UNDER ADVANCED (v3.1)
-// Disuntikkan di bagian bawah agar tidak mengganggu logic di atas
+// [BARU] MODUL OVER/UNDER 8 LINE ADVANCED (v3.1)
 // =========================================================
 
 function ou_oddsToProb(odds) {
@@ -459,14 +476,19 @@ function renderOverUnderCard(idx, lines, oddsOver, oddsUnder) {
   const lambda = result.lambda.toFixed(2);
   const margin = (result.main.margin * 100).toFixed(2);
 
+  // Render 8 Line Fair Probabilities
   let linesHtml = '';
   result.fairData.forEach(d => {
-    linesHtml += `<div style="background:#f0fdf4; padding:8px; border-radius:8px; border-left:4px solid #22c55e; margin-top:6px;">
-      <div style="font-size:11px; font-weight:700; color:#15803d;">Over ${d.line}: ${(d.pOverFair*100).toFixed(1)}%</div>
-      <div style="font-size:10px; color:#166534;">Under ${d.line}: ${(d.pUnderFair*100).toFixed(1)}%</div>
+    const isMain = d.line === 2.5;
+    linesHtml += `<div style="background:${isMain ? '#dcfce7' : '#f0fdf4'}; padding:6px 8px; border-radius:6px; border-left:3px solid ${isMain ? '#16a34a' : '#86efac'}; margin-bottom:4px;">
+      <div style="display:flex; justify-content:space-between; font-size:11px; font-weight:700; color:#15803d;">
+        <span>Line ${d.line} ${isMain ? '⭐' : ''}</span>
+        <span>O: ${(d.pOverFair*100).toFixed(1)}% | U: ${(d.pUnderFair*100).toFixed(1)}%</span>
+      </div>
     </div>`;
   });
 
+  // Render Goal Distribution (0-5)
   let distHtml = '';
   for(let k=0; k<=5; k++) {
     const prob = (ou_poissonProb(k, result.lambda) * 100).toFixed(1);
@@ -478,13 +500,13 @@ function renderOverUnderCard(idx, lines, oddsOver, oddsUnder) {
 
   const ouHtml = `
     <div style="margin-top:12px; padding:12px; background:#ffffff; border:1px solid #bbf7d0; border-radius:12px; box-shadow:0 2px 8px rgba(34,197,94,0.1);">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <strong style="color:#15803d; font-size:13px;"><i class="fa-solid fa-chart-pie"></i> Analisis Over/Under</strong>
-        <span style="background:#dcfce7; color:#166534; padding:2px 8px; border-radius:6px; font-size:10px; font-weight:700;">λ: ${lambda} | Margin: ${margin}%</span>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid #dcfce7; padding-bottom:8px;">
+        <strong style="color:#15803d; font-size:13px;"><i class="fa-solid fa-chart-pie"></i> Analisis Over/Under (8 Line)</strong>
+        <span style="background:#dcfce7; color:#166534; padding:3px 10px; border-radius:6px; font-size:11px; font-weight:700;">λ: ${lambda} | Margin: ${margin}%</span>
       </div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
         <div>${linesHtml}</div>
-        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px;">${distHtml}</div>
+        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; align-content:start;">${distHtml}</div>
       </div>
     </div>
   `;
