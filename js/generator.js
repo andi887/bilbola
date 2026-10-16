@@ -1,75 +1,72 @@
 // =========================================================
-// v3.9.0 - OVER/UNDER 4 LINE MANUAL (FLEKSIBEL PASARAN)
-// Semua logic asli dipertahankan 100%
+// v4.0.0 - UNIFIKASI MODULAR SDK + FIRESTORE SERVICE
+// Mengintegrasikan generator.js dengan firestore-service.js
 // =========================================================
 
-const firebaseConfig = {
-  apiKey: "AIzaSyXXXX-GANTI",
-  authDomain: "parlaypribadi-XXXX.firebaseapp.com",
-  projectId: "parlaypribadi",
-  storageBucket: "parlaypribadi.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef"
-};
+// [FIX] Import Modular SDK & Service
+import { firebaseConfig } from "./firebase-config.js";
+import { 
+  initFirestore, 
+  savePrediction 
+} from "./firestore-service.js";
 
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { 
+  getFirestore, 
+  collection, 
+  addDoc, 
+  serverTimestamp 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// =========================================================
+// INISIALISASI FIREBASE (MODULAR)
+// =========================================================
 let db = null;
 let firestoreConnected = false;
 
-function initFirestore() {
+async function initFirebaseModular() {
   try {
-    if (typeof firebase === 'undefined') {
-      console.warn('Firebase SDK belum ada - coba load via CDN dinamis');
-      updateFirebaseStatus('🟡 Demo mode (Firebase SDK tidak ada)', '#fef3c7');
-      loadFirebaseSDK();
-      return;
-    }
-    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-    db = firebase.firestore();
+    const app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
     firestoreConnected = true;
     updateFirebaseStatus(`🟢 Firestore: ${firebaseConfig.projectId}`, '#dcfce7');
-    setTimeout(() => loadTeams(), 500);
+    console.log("✅ Firebase Modular SDK terhubung");
+    await loadTeams();
   } catch (err) {
+    console.error("❌ Gagal init Firebase Modular:", err);
     updateFirebaseStatus(`🔴 ${err.message}`, '#fee2e2');
   }
 }
 
-function loadFirebaseSDK() {
-  const appScript = document.createElement('script');
-  appScript.src = 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js';
-  appScript.onload = () => {
-    const fsScript = document.createElement('script');
-    fsScript.src = 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js';
-    fsScript.onload = () => {
-      if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-      db = firebase.firestore();
-      firestoreConnected = true;
-      updateFirebaseStatus(`🟢 Firestore terhubung: ${firebaseConfig.projectId}`, '#dcfce7');
-    };
-    document.head.appendChild(fsScript);
-  };
-  document.head.appendChild(appScript);
-}
-
 function updateFirebaseStatus(text, bg) {
   const el = document.getElementById('firebaseStatus');
-  if (el) { el.textContent = text; if (bg) el.style.background = bg; }
+  if (el) { 
+    el.textContent = text; 
+    if (bg) el.style.background = bg; 
+  }
 }
 
+// Simpan ke Firestore (dengan fallback localStorage)
 async function simpanKeFirestore(data) {
   if (!firestoreConnected || !db) {
+    console.warn("️ Firestore tidak aktif, simpan ke localStorage");
     const hist = JSON.parse(localStorage.getItem('histori_bilbola') || '[]');
     hist.unshift({ ...data, createdAt: new Date().toISOString(), id: 'local-' + Date.now() });
     localStorage.setItem('histori_bilbola', JSON.stringify(hist.slice(0, 20)));
+    updateFirebaseStatus('🟡 Mode Lokal (Firestore gagal)', '#fef3c7');
     return;
   }
   try {
-    await db.collection('predictions').add({
+    await addDoc(collection(db, 'predictions'), {
       ...data,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      version: 'v3.9.0-ou-4lines-manual'
+      createdAt: serverTimestamp(),
+      source: 'bilbola/pages/generator.html',
+      version: 'v4.0.0-modular-unified'
     });
+    console.log("✅ Prediksi disimpan ke Firestore");
   } catch (err) {
-    console.error(err);
+    console.error("❌ Gagal simpan ke Firestore:", err);
+    updateFirebaseStatus('🔴 Gagal simpan: ' + err.message, '#fee2e2');
   }
 }
 
@@ -121,9 +118,8 @@ function updateXgPreview(idx){
 }
 
 function createMatchCard(idx){
-  // [BARU] Generate 4 baris input manual untuk Line, Over, dan Under
   let ouInputsHtml = '';
-  const defaultLines = [2.5, 2.75, 3.0, 3.25]; // Default value yang bisa diedit user
+  const defaultLines = [2.5, 2.75, 3.0, 3.25];
   
   for (let i = 1; i <= 4; i++) {
     ouInputsHtml += `
@@ -165,7 +161,6 @@ function createMatchCard(idx){
       <div><label style="font-size:11px; color:#9d174d;">Odds B (2)</label><input type="number" step="0.01" id="oddB_${idx}" value="3.20" style="width:100%; margin-top:4px; background:#fff7f8; border:1px solid #f9a8d4; border-radius:8px; padding:8px; color:#7c3aed; font-weight:700; text-align:center;"></div>
     </div>
 
-    <!-- [BARU] GRID INPUT 4 LINE MANUAL OVER/UNDER -->
     <div style="background:#f0fdf4; padding:12px; border-radius:12px; border:1px solid #bbf7d0; margin-bottom:14px;">
       <div style="font-size:12px; font-weight:700; color:#15803d; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
         <i class="fa-solid fa-sliders"></i> Input Odds Over/Under (4 Line Manual)
@@ -295,7 +290,6 @@ function hitungSingle(idx){
   
   if(!tim1||!tim2||isNaN(odds1)) return null;
 
-  // [BARU] Baca 4 baris input manual Line, Over, dan Under secara dinamis
   const lines = [];
   const oddsOver = [];
   const oddsUnder = [];
@@ -305,7 +299,6 @@ function hitungSingle(idx){
     const oVal = parseFloat(document.getElementById(`ou_o_${i}_${idx}`)?.value);
     const uVal = parseFloat(document.getElementById(`ou_u_${i}_${idx}`)?.value);
 
-    // Hanya masukkan ke array jika Line valid (mencegah error matematika)
     if (!isNaN(lineVal) && lineVal > 0) {
       lines.push(lineVal);
       oddsOver.push(isNaN(oVal) ? 0 : oVal);
@@ -354,12 +347,11 @@ function renderSingle(data){
       <div style="display:flex; justify-content:space-between;"><strong style="color:#831843;">${data.tim1} vs ${data.tim2}</strong><span style="background:#fce7f3; border:1px solid #f9a8d4; padding:2px 6px; border-radius:6px; font-size:10px;">xG ${data.xgA.toFixed(2)}-${data.xgB.toFixed(2)}</span></div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
         <div style="background:#fff1f2; padding:8px; border-radius:8px; border:1px solid #fecdd3;"><small style="color:#be185d;">Pasar</small><br>${data.tim1} ${(data.prob1M*100).toFixed(1)}%<br>Seri ${(data.probDM*100).toFixed(1)}%<br>${data.tim2} ${(data.prob2M*100).toFixed(1)}%</div>
-        <div style="background:#fdf2f8; padding:8px; border-radius:8px; border:1px solid #f9a8d4;"><small style="color:#be185d;">Model + EV</small><br>${data.tim1} ${(data.probAWin*100).toFixed(1)}% EV ${data.evA.toFixed(1)}%${data.evA>5?' 🔥':''}<br>Seri ${(data.probDraw*100).toFixed(1)}% EV ${data.evD.toFixed(1)}%<br>${data.tim2} ${(data.probBWin*100).toFixed(1)}% EV ${data.evB.toFixed(1)}%${data.evB>5?' 🔥':''}</div>
+        <div style="background:#fdf2f8; padding:8px; border-radius:8px; border:1px solid #f9a8d4;"><small style="color:#be185d;">Model + EV</small><br>${data.tim1} ${(data.probAWin*100).toFixed(1)}% EV ${data.evA.toFixed(1)}%${data.evA>5?' ':''}<br>Seri ${(data.probDraw*100).toFixed(1)}% EV ${data.evD.toFixed(1)}%<br>${data.tim2} ${(data.probBWin*100).toFixed(1)}% EV ${data.evB.toFixed(1)}%${data.evB>5?' ':''}</div>
       </div>
       <div style="margin-top:8px; font-size:11px; display:flex; justify-content:space-between; color:#9d174d;"><span>Top: <strong style="color:#db2777;">${data.scoreMatrix[0].score}</strong> ${(data.scoreMatrix[0].prob*100).toFixed(1)}%</span><span>Over 2.5 ${(data.probOver25*100).toFixed(1)}%</span></div>
     </div>`;
 
-  // [BARU] Suntikkan Card Grid Over/Under dinamis di bawah hasil 1X2
   renderOverUnderCard(data.idx, data.lines, data.oddsOver, data.oddsUnder);
 }
 
@@ -370,63 +362,58 @@ async function hasilkanPrediksi(){
     const data=hitungSingle(1) || hitungSingle('') || (()=>{ const tim1=document.getElementById('tim1')?.value, tim2=document.getElementById('tim2')?.value; return hitungSingle(1); })();
     if(!data){ alert('Lengkapi data!'); return; }
     renderSingle(data); all.push(data);
-    await simpanKeFirestore({ tim1:data.tim1, tim2:data.tim2, odds1:data.odds1, oddsDraw:data.oddsDraw, odds2:data.odds2, xgA:data.xgA, xgB:data.xgB, topScore:data.scoreMatrix[0]?.score, matchLabel:`${data.tim1} vs ${data.tim2}` });
+    await simpanKeFirestore(buildFirestorePayload(data));
   } else {
     for(const card of cards){
       const idx=card.dataset.idx;
       const data=hitungSingle(idx);
       if(!data) continue;
       renderSingle(data); all.push(data);
-      await simpanKeFirestore({ tim1:data.tim1, tim2:data.tim2, odds1:data.odds1, oddsDraw:data.oddsDraw, odds2:data.odds2, xgA:data.xgA, xgB:data.xgB, topScore:data.scoreMatrix[0]?.score, matchLabel:`${data.tim1} vs ${data.tim2}` });
+      await simpanKeFirestore(buildFirestorePayload(data));
     }
   }
   const globalEl=document.getElementById('hasilSemuaPrediksi');
   if(globalEl && all.length>0){
-    let html=`<div style="margin-top:16px; padding:16px; background:#ffffff; border:1px solid #f9a8d4; border-radius:16px; box-shadow:0 4px 12px rgba(236,72,153,0.15);"><h3 style="margin:0 0 12px 0; color:#831843; font-size:14px;">📋 Rekap ${all.length} Prediksi ${firestoreConnected?'✅ Firestore':''}</h3><div style="display:grid; gap:8px;">`;
+    let html=`<div style="margin-top:16px; padding:16px; background:#ffffff; border:1px solid #f9a8d4; border-radius:16px; box-shadow:0 4px 12px rgba(236,72,153,0.15);"><h3 style="margin:0 0 12px 0; color:#831843; font-size:14px;">📋 Rekap ${all.length} Prediksi ${firestoreConnected?'✅ Firestore':'⚠️ Lokal'}</h3><div style="display:grid; gap:8px;">`;
     all.forEach(r=>{ html+=`<div style="display:flex; justify-content:space-between; background:#fff1f2; padding:10px; border-radius:10px; border:1px solid #fecdd3;"><div><strong style="color:#831843;">${r.tim1} vs ${r.tim2}</strong><br><small style="color:#be185d;">Total GF ${r.gfATotal}/${r.gfBTotal} | Top ${r.scoreMatrix[0].score}</small></div><div><span style="background:#ec4899; color:#fff; padding:4px 8px; border-radius:6px; font-size:11px;">${r.probAWin>r.probBWin?r.tim1:r.tim2}</span></div></div>`; });
     html+=`</div></div>`;
     globalEl.innerHTML=html;
   }
 }
 
-document.addEventListener('DOMContentLoaded', ()=>{
-  initFirestore();
-  document.body.style.background='#ffe4e6';
-  document.body.style.backgroundImage='linear-gradient(135deg, #ffe4e6 0%, #fce7f3 50%, #fbcfe8 100%)';
-  document.body.style.minHeight='100vh';
-
-  let container=document.getElementById('matchesContainer');
-  if(!container){
-    const hasil=document.getElementById('hasilPrediksi');
-    const wrapper=document.createElement('div');
-    wrapper.innerHTML=`
-      <div style="display:flex; justify-content:space-between; align-items:center; margin:16px; flex-wrap:wrap; gap:8px;">
-        <div style="display:flex; gap:8px;">
-          <button type="button" onclick="kembaliKeBeranda()" style="background:#ffffff; color:#831843; border:1px solid #f9a8d4; padding:8px 14px; border-radius:10px; font-size:12px; cursor:pointer;"><i class="fa-solid fa-house"></i> Kembali ke Beranda</button>
-          <span id="matchCounter" style="background:#ffffff; border:1px solid #f9a8d4; padding:8px 12px; border-radius:10px; font-size:12px; color:#be185d;">1 pertandingan</span>
-          <span id="firebaseStatus" style="background:#ffffff; border:1px solid #f9a8d4; padding:8px 12px; border-radius:10px; font-size:11px; color:#be185d;">🔄 Menghubungkan Firestore...</span>
-        </div>
-        <div style="display:flex; gap:8px;">
-          <button type="button" id="btnTambahPrediksi" onclick="tambahPrediksi()" style="background:#ec4899; color:#ffffff; border:none; padding:8px 16px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer;"><i class="fa-solid fa-plus"></i> Tambah Prediksi (1/5)</button>
-          <button type="button" id="btnPrediksi" onclick="hasilkanPrediksi()" style="background:#be185d; color:#fff; border:none; padding:8px 16px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer;"><i class="fa-solid fa-calculator"></i> Hitung Semua</button>
-        </div>
-      </div>
-      <div id="matchesContainer"></div>
-      <div id="hasilSemuaPrediksi"></div>
-      <div id="historiBox" style="display:none; margin:16px;"></div>
-      <div id="statusTeams" style="margin:16px; font-size:11px; color:#be185d;"></div>
-    `;
-    if(hasil && hasil.parentNode){ hasil.parentNode.insertBefore(wrapper, hasil); }
-    else { document.body.prepend(wrapper); }
-    container=document.getElementById('matchesContainer');
-  }
-  if(container && container.children.length===0){ container.innerHTML=createMatchCard(1); matchCount=1; }
-  setTimeout(()=>{ loadTeams(); updateTambahButton(); updateXgPreview(1); }, 300);
-});
-
+// [BARU] Build payload lengkap untuk Firestore (termasuk 4-line OU)
+function buildFirestorePayload(data) {
+  const ouLines = data.lines.map((line, i) => ({
+    line: line,
+    over: data.oddsOver[i] || 0,
+    under: data.oddsUnder[i] || 0
+  }));
+  
+  return {
+    tim1: data.tim1,
+    tim2: data.tim2,
+    odds1: data.odds1,
+    oddsDraw: data.oddsDraw,
+    odds2: data.odds2,
+    xgA: data.xgA,
+    xgB: data.xgB,
+    topScore: data.scoreMatrix[0]?.score,
+    topScoreProb: data.scoreMatrix[0]?.prob || 0,
+    probAWin: data.probAWin,
+    probDraw: data.probDraw,
+    probBWin: data.probBWin,
+    probOver25: data.probOver25,
+    overUnder: ouLines,
+    gfATotal: data.gfATotal,
+    gaATotal: data.gaATotal,
+    gfBTotal: data.gfBTotal,
+    gaBTotal: data.gaBTotal,
+    matchLabel: `${data.tim1} vs ${data.tim2}`
+  };
+}
 
 // =========================================================
-// [BARU] MODUL OVER/UNDER 4 LINE MANUAL ADVANCED
+// MODUL OVER/UNDER 4 LINE MANUAL ADVANCED
 // =========================================================
 
 function ou_oddsToProb(odds) {
@@ -474,7 +461,6 @@ function ou_findLambdaFromProb(targetProbOver, line) {
 function ou_buildDistribution(lines, oddsOver, oddsUnder) {
   if (!Array.isArray(lines) || lines.length === 0) return { fairData: [], main: null, lambda: 2.5 };
   const fairData = lines.map((line, i) => ({ line: parseFloat(line), ...ou_getFairProbsPerLine(oddsOver[i], oddsUnder[i]) }));
-  // Cari line 2.5 sebagai acuan utama, jika tidak ada, pakai line pertama
   const main = fairData.find(d => d.line === 2.5) || fairData[0];
   const lambda = main ? ou_findLambdaFromProb(main.pOverFair, main.line) : 2.5;
   return { fairData, main, lambda };
@@ -490,10 +476,9 @@ function renderOverUnderCard(idx, lines, oddsOver, oddsUnder) {
   const lambda = result.lambda.toFixed(2);
   const margin = (result.main.margin * 100).toFixed(2);
 
-  // Render Fair Probabilities berdasarkan input manual user
   let linesHtml = '';
   result.fairData.forEach(d => {
-    const isMain = d.line === 2.5; // Highlight jika line adalah 2.5
+    const isMain = d.line === 2.5;
     linesHtml += `<div style="background:${isMain ? '#dcfce7' : '#f0fdf4'}; padding:6px 8px; border-radius:6px; border-left:3px solid ${isMain ? '#16a34a' : '#86efac'}; margin-bottom:4px;">
       <div style="display:flex; justify-content:space-between; font-size:11px; font-weight:700; color:#15803d;">
         <span>Line ${d.line} ${isMain ? '⭐' : ''}</span>
@@ -502,7 +487,6 @@ function renderOverUnderCard(idx, lines, oddsOver, oddsUnder) {
     </div>`;
   });
 
-  // Render Goal Distribution (0-5)
   let distHtml = '';
   for(let k=0; k<=5; k++) {
     const prob = (ou_poissonProb(k, result.lambda) * 100).toFixed(1);
@@ -527,3 +511,48 @@ function renderOverUnderCard(idx, lines, oddsOver, oddsUnder) {
 
   el.insertAdjacentHTML('beforeend', ouHtml);
 }
+
+// =========================================================
+// INIT SAAT DOM READY
+// =========================================================
+document.addEventListener('DOMContentLoaded', async ()=>{
+  document.body.style.background='#ffe4e6';
+  document.body.style.backgroundImage='linear-gradient(135deg, #ffe4e6 0%, #fce7f3 50%, #fbcfe8 100%)';
+  document.body.style.minHeight='100vh';
+
+  // [FIX] Tampilkan status loading
+  updateFirebaseStatus('🔄 Menghubungkan Firestore...', '#fef3c7');
+
+  let container=document.getElementById('matchesContainer');
+  if(!container){
+    const hasil=document.getElementById('hasilPrediksi');
+    const wrapper=document.createElement('div');
+    wrapper.innerHTML=`
+      <div style="display:flex; justify-content:space-between; align-items:center; margin:16px; flex-wrap:wrap; gap:8px;">
+        <div style="display:flex; gap:8px;">
+          <button type="button" onclick="kembaliKeBeranda()" style="background:#ffffff; color:#831843; border:1px solid #f9a8d4; padding:8px 14px; border-radius:10px; font-size:12px; cursor:pointer;"><i class="fa-solid fa-house"></i> Kembali ke Beranda</button>
+          <span id="matchCounter" style="background:#ffffff; border:1px solid #f9a8d4; padding:8px 12px; border-radius:10px; font-size:12px; color:#be185d;">1 pertandingan</span>
+          <span id="firebaseStatus" style="background:#ffffff; border:1px solid #f9a8d4; padding:8px 12px; border-radius:10px; font-size:11px; color:#be185d;">🔄 Menghubungkan Firestore...</span>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button type="button" id="btnTambahPrediksi" onclick="tambahPrediksi()" style="background:#ec4899; color:#ffffff; border:none; padding:8px 16px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer;"><i class="fa-solid fa-plus"></i> Tambah Prediksi (1/5)</button>
+          <button type="button" id="btnPrediksi" onclick="hasilkanPrediksi()" style="background:#be185d; color:#fff; border:none; padding:8px 16px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer;"><i class="fa-solid fa-calculator"></i> Hitung Semua</button>
+        </div>
+      </div>
+      <div id="matchesContainer"></div>
+      <div id="hasilSemuaPrediksi"></div>
+      <div id="historiBox" style="display:none; margin:16px;"></div>
+      <div id="statusTeams" style="margin:16px; font-size:11px; color:#be185d;"></div>
+    `;
+    if(hasil && hasil.parentNode){ hasil.parentNode.insertBefore(wrapper, hasil); }
+    else { document.body.prepend(wrapper); }
+    container=document.getElementById('matchesContainer');
+  }
+  if(container && container.children.length===0){ container.innerHTML=createMatchCard(1); matchCount=1; }
+  
+  // [FIX] Inisialisasi Firebase Modular (asynchronous)
+  await initFirebaseModular();
+  
+  updateTambahButton();
+  updateXgPreview(1);
+});
