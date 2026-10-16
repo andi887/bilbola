@@ -1,23 +1,9 @@
-/ js/firestore-service.js - FIX PRESERVE ORI + ANTI DUPLICATE
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { 
-  getFirestore, 
-  collection, 
-  doc,
-  getDocs, 
-  getDoc,
-  addDoc, 
-  setDoc,
-  deleteDoc,
-  query, 
-  orderBy, 
-  limit, 
-  where,
-  serverTimestamp 
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, doc, getDocs, addDoc, deleteDoc, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
-let app, db;
+let app = null;
+let db = null;
 let isConnected = false;
 
 export async function initFirestore() {
@@ -29,64 +15,47 @@ export async function initFirestore() {
     }
     db = getFirestore(app);
     isConnected = true;
-    console.log("✅ Firestore terhubung:", firebaseConfig.projectId);
-    return { app, db, connected: true };
+    console.log("Firestore terhubung:", firebaseConfig.projectId);
+    return { app: app, db: db, connected: true };
   } catch (err) {
-    console.error("❌ Gagal konek Firestore:", err);
+    console.error("Gagal konek Firestore:", err);
     return { connected: false, error: err.message };
   }
 }
 
-export async function getTeams() {
-  try {
-    if (!isConnected) await initFirestore();
-    const q = query(collection(db, "teams"), orderBy("liga"));
-    const snap = await getDocs(q);
-    if (!snap.empty) {
-      const data = {};
-      snap.forEach(docSnap => {
-        const d = docSnap.data();
-        if (!data[d.liga]) data[d.liga] = [];
-        data[d.liga].push(d.nama);
-      });
-      return data;
-    }
-    const res = await fetch('../data/teams.json');
-    return await res.json();
-  } catch (err) {
-    const res = await fetch('../data/teams.json');
-    return await res.json();
-  }
-}
-
-export async function getStats() {
-  try {
-    if (!isConnected) await initFirestore();
-    const q = query(collection(db, "team_stats"));
-    const snap = await getDocs(q);
-    if (!snap.empty) {
-      const stats = {};
-      snap.forEach(d => stats[d.id] = d.data());
-      return stats;
-    }
-    const res = await fetch('../data/stat.json');
-    return await res.json();
-  } catch (err) {
-    const res = await fetch('../data/stat.json');
-    return await res.json();
-  }
-}
-
 export async function savePrediction(predictionData) {
-  if (!isConnected) await initFirestore();
+  if (!isConnected) {
+    await initFirestore();
+  }
   try {
-    const docRef = await addDoc(collection(db, "predictions"), {
-      ...predictionData,
+    const colRef = collection(db, "predictions");
+    const dataToSave = {
+      tim1: predictionData.tim1,
+      tim2: predictionData.tim2,
+      odds1: predictionData.odds1,
+      oddsDraw: predictionData.oddsDraw,
+      odds2: predictionData.odds2,
+      xgA: predictionData.xgA,
+      xgB: predictionData.xgB,
+      topScore: predictionData.topScore,
+      topScoreProb: predictionData.topScoreProb,
+      probAWin: predictionData.probAWin,
+      probDraw: predictionData.probDraw,
+      probBWin: predictionData.probBWin,
+      probOver25: predictionData.probOver25,
+      overUnder: predictionData.overUnder,
+      gfATotal: predictionData.gfATotal,
+      gaATotal: predictionData.gaATotal,
+      gfBTotal: predictionData.gfBTotal,
+      gaBTotal: predictionData.gaBTotal,
+      matchLabel: predictionData.matchLabel,
+      waktu: predictionData.waktu || new Date().toLocaleString("id-ID"),
+      waktuISO: predictionData.waktuISO || new Date().toISOString(),
       createdAt: serverTimestamp(),
-      waktu: predictionData.waktu || new Date().toLocaleString("id-ID", {day:"2-digit", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit"}),
-      source: "bilbola/pages/generator.html",
-      version: "v4.2-preserve-ori"
-    });
+      source: "bilbola",
+      version: "v4.4-final"
+    };
+    const docRef = await addDoc(colRef, dataToSave);
     console.log("Prediksi disimpan:", docRef.id);
     return docRef.id;
   } catch (err) {
@@ -95,60 +64,52 @@ export async function savePrediction(predictionData) {
   }
 }
 
-export async function getPredictionHistory(max = 5) {
-  if (!isConnected) await initFirestore();
-  const q = query(collection(db, "predictions"), orderBy("createdAt", "desc"), limit(max));
-  const snap = await getDocs(q);
-  const list = [];
-  snap.forEach(d => list.push({ id: d.id, ...d.data() }));
-  return list;
-}
-
-export async function migrateTeamsJsonToFirestore() {
-  if (!isConnected) await initFirestore();
-  const res = await fetch('../data/teams.json');
-  const data = await res.json();
-  let count = 0;
-  for (const [liga, daftar] of Object.entries(data)) {
-    for (const nama of daftar) {
-      await addDoc(collection(db, "teams"), { liga, nama, createdAt: serverTimestamp() });
-      count++;
-    }
-  }
-  return count;
-}
-
 export async function getAllPredictions() {
-  if (!isConnected) await initFirestore();
+  if (!isConnected) {
+    await initFirestore();
+  }
   try {
     const q = query(collection(db, "predictions"), orderBy("createdAt", "desc"));
     const snap = await getDocs(q);
     const list = [];
-    snap.forEach(d => {
+    snap.forEach(function(d) {
       const data = d.data();
       let waktu = data.waktu || "Baru saja";
       if (!data.waktu && data.createdAt && data.createdAt.seconds) {
-        waktu = new Date(data.createdAt.seconds * 1000).toLocaleString("id-ID", {
-          day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit"
-        });
+        waktu = new Date(data.createdAt.seconds * 1000).toLocaleString("id-ID");
       }
-      list.push({ id: d.id, waktu, ...data });
+      const item = { id: d.id, waktu: waktu };
+      Object.assign(item, data);
+      list.push(item);
     });
     return list;
   } catch (err) {
-    console.error(" Gagal ambil semua prediksi:", err);
+    console.error("Gagal ambil semua prediksi:", err);
     return [];
   }
 }
 
 export async function deletePrediction(docId) {
-  if (!isConnected) await initFirestore();
+  if (!isConnected) {
+    await initFirestore();
+  }
   try {
-    await deleteDoc(doc(db, "predictions", docId));
-    console.log("✅ Prediksi dihapus:", docId);
+    const docRef = doc(db, "predictions", docId);
+    await deleteDoc(docRef);
+    console.log("Prediksi dihapus:", docId);
     return true;
   } catch (err) {
-    console.error("❌ Gagal hapus prediksi:", err);
+    console.error("Gagal hapus prediksi:", err);
     return false;
   }
+}
+
+export async function getPredictionHistory(max) {
+  if (!max) max = 5;
+  if (!isConnected) await initFirestore();
+  const q = query(collection(db, "predictions"), orderBy("createdAt", "desc"), limit(max));
+  const snap = await getDocs(q);
+  const list = [];
+  snap.forEach(function(d) { list.push({ id: d.id, ...d.data() }); });
+  return list;
 }
