@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rekap Prediksi - Situs Prediksi Bola</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/rekap.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <header>
+    <h1>⚽ Rekap Prediksi</h1>
+    <nav>
+      <ul>
+        <li><a href="../index.html">Beranda</a></li>
+        <li><a href="teams.html">Daftar Tim</a></li>
+        <li><a href="generator.html">Generator Prediksi</a></li>
+        <li><a href="parlay.html">Kalkulator Parlay</a></li>
+        <li><a href="rekap.html" style="text-decoration: underline;">Rekap</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <div class="rekap-controls">
+      <button id="btnRefresh" class="btn-primary"><i class="fa-solid fa-rotate"></i> Refresh Data</button>
+      <span id="statusLoading" class="loading-text">Memuat data dari Firestore...</span>
+    </div>
+
+    <div id="rekapContainer" class="rekap-grid">
+      <!-- Data rekap akan muncul di sini -->
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; 2026 Situs Prediksi Bola - Rekap Prediksi</p>
+  </footer>
+
+  <script type="module">
+    import { initFirestore, getAllPredictions, deletePrediction } from '../js/firestore-service.js';
+
+    const rekapContainer = document.getElementById('rekapContainer');
+    const statusLoading = document.getElementById('statusLoading');
+    const btnRefresh = document.getElementById('btnRefresh');
+
+    async function renderRekap() {
+      statusLoading.style.display = 'inline';
+      rekapContainer.innerHTML = '';
+      
+      await initFirestore();
+      const dataRekap = await getAllPredictions();
+      
+      statusLoading.style.display = 'none';
+
+      if (dataRekap.length === 0) {
+        rekapContainer.innerHTML = `
+          <div class="empty-state">
+            <h3>📭 Belum ada data rekap</h3>
+            <p>Silakan generate prediksi terlebih dahulu di halaman <a href="generator.html">Generator</a>.</p>
+          </div>
+        `;
+        return;
+      }
+
+      dataRekap.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'rekap-card';
+        
+        card.innerHTML = `
+          <div class="card-header">
+            <span class="match-date"><i class="fa-regular fa-clock"></i> ${item.waktu}</span>
+            <button class="btn-hapus" data-id="${item.id}"><i class="fa-solid fa-trash"></i> Hapus</button>
+          </div>
+          <div class="match-teams">
+            <span class="team-home">${item.tim1 || 'Tuan Rumah'}</span>
+            <span class="vs">VS</span>
+            <span class="team-away">${item.tim2 || 'Tamu'}</span>
+          </div>
+          <div class="match-odds">
+            <div class="odd-box"><strong>1</strong><br>${item.odds1 || '-'}</div>
+            <div class="odd-box"><strong>X</strong><br>${item.oddsDraw || '-'}</div>
+            <div class="odd-box"><strong>2</strong><br>${item.odds2 || '-'}</div>
+          </div>
+          <div class="match-xg">
+            <strong>Expected Goals (xG):</strong> ${item.xgA?.toFixed(2) || '-'} - ${item.xgB?.toFixed(2) || '-'}
+          </div>
+          ${item.topScore ? `
+          <div class="match-prediksi">
+            <strong>🎯 Skor Paling Mungkin:</strong> ${item.topScore}
+          </div>` : ''}
+        `;
+        rekapContainer.appendChild(card);
+      });
+
+      // Event listener untuk tombol hapus
+      document.querySelectorAll('.btn-hapus').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const id = e.target.closest('.btn-hapus').getAttribute('data-id');
+          if (confirm('Yakin ingin menghapus rekap ini dari Firestore?')) {
+            e.target.closest('.btn-hapus').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            const success = await deletePrediction(id);
+            if (success) renderRekap();
+            else alert('Gagal menghapus data.');
+          }
+        });
+      });
+    }
+
+    btnRefresh.addEventListener('click', renderRekap);
+    renderRekap(); // Load saat halaman dibuka
+  </script>
+</body>
+</html>
