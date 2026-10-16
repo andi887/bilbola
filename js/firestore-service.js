@@ -11,6 +11,7 @@ import {
   getDoc,
   addDoc, 
   setDoc,
+  deleteDoc, // <--- [BARU] Ditambahkan untuk fungsi hapus di halaman Rekap
   query, 
   orderBy, 
   limit, 
@@ -125,4 +126,45 @@ export async function migrateTeamsJsonToFirestore() {
   }
   console.log(`Migrasi ${count} tim ke Firestore selesai`);
   return count;
+}
+
+// ==========================================
+// 🆕 FUNGSI KHUSUS UNTUK HALAMAN REKAP
+// ==========================================
+
+// Ambil semua histori prediksi untuk halaman Rekap
+export async function getAllPredictions() {
+  if (!isConnected) await initFirestore();
+  try {
+    const q = query(collection(db, "predictions"), orderBy("createdAt", "desc"));
+    const snap = await getDocs(q);
+    const list = [];
+    snap.forEach(d => {
+      const data = d.data();
+      let waktu = "Baru saja";
+      if (data.createdAt && data.createdAt.seconds) {
+        waktu = new Date(data.createdAt.seconds * 1000).toLocaleString("id-ID", {
+          day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit"
+        });
+      }
+      list.push({ id: d.id, waktu, ...data });
+    });
+    return list;
+  } catch (err) {
+    console.error(" Gagal ambil semua prediksi:", err);
+    return [];
+  }
+}
+
+// Hapus satu prediksi dari Firestore
+export async function deletePrediction(docId) {
+  if (!isConnected) await initFirestore();
+  try {
+    await deleteDoc(doc(db, "predictions", docId));
+    console.log("✅ Prediksi dihapus:", docId);
+    return true;
+  } catch (err) {
+    console.error("❌ Gagal hapus prediksi:", err);
+    return false;
+  }
 }
