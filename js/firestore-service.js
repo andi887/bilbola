@@ -1,4 +1,4 @@
-// js/firestore-service.js - FIX PRESERVE ORI + ANTI DUPLICATE
+/ js/firestore-service.js - FIX PRESERVE ORI + ANTI DUPLICATE
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { 
   getFirestore, 
