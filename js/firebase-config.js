@@ -11,3 +11,6 @@ const firebaseConfig = {
   messagingSenderId: "42241144949",
   appId: "1:42241144949:web:1bbc9c022c717d4643203c"
 };
+
+// ⬇️ BARIS PENTING INI WAJIB ADA ⬇️
+export { firebaseConfig };
