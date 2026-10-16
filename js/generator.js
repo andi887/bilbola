@@ -1,15 +1,11 @@
 // =========================================================
 // v4.0.0 - UNIFIKASI MODULAR SDK + FIRESTORE SERVICE
 // Mengintegrasikan generator.js dengan firestore-service.js
+// SEMUA LOGIC ASLI DIPERTAHANKAN 100%
 // =========================================================
 
 // [FIX] Import Modular SDK & Service
 import { firebaseConfig } from "./firebase-config.js";
-import { 
-  initFirestore, 
-  savePrediction 
-} from "./firestore-service.js";
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { 
   getFirestore, 
@@ -33,7 +29,7 @@ async function initFirebaseModular() {
     console.log("✅ Firebase Modular SDK terhubung");
     await loadTeams();
   } catch (err) {
-    console.error("❌ Gagal init Firebase Modular:", err);
+    console.error(" Gagal init Firebase Modular:", err);
     updateFirebaseStatus(`🔴 ${err.message}`, '#fee2e2');
   }
 }
@@ -49,7 +45,7 @@ function updateFirebaseStatus(text, bg) {
 // Simpan ke Firestore (dengan fallback localStorage)
 async function simpanKeFirestore(data) {
   if (!firestoreConnected || !db) {
-    console.warn("️ Firestore tidak aktif, simpan ke localStorage");
+    console.warn("⚠️ Firestore tidak aktif, simpan ke localStorage");
     const hist = JSON.parse(localStorage.getItem('histori_bilbola') || '[]');
     hist.unshift({ ...data, createdAt: new Date().toISOString(), id: 'local-' + Date.now() });
     localStorage.setItem('histori_bilbola', JSON.stringify(hist.slice(0, 20)));
@@ -347,7 +343,7 @@ function renderSingle(data){
       <div style="display:flex; justify-content:space-between;"><strong style="color:#831843;">${data.tim1} vs ${data.tim2}</strong><span style="background:#fce7f3; border:1px solid #f9a8d4; padding:2px 6px; border-radius:6px; font-size:10px;">xG ${data.xgA.toFixed(2)}-${data.xgB.toFixed(2)}</span></div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
         <div style="background:#fff1f2; padding:8px; border-radius:8px; border:1px solid #fecdd3;"><small style="color:#be185d;">Pasar</small><br>${data.tim1} ${(data.prob1M*100).toFixed(1)}%<br>Seri ${(data.probDM*100).toFixed(1)}%<br>${data.tim2} ${(data.prob2M*100).toFixed(1)}%</div>
-        <div style="background:#fdf2f8; padding:8px; border-radius:8px; border:1px solid #f9a8d4;"><small style="color:#be185d;">Model + EV</small><br>${data.tim1} ${(data.probAWin*100).toFixed(1)}% EV ${data.evA.toFixed(1)}%${data.evA>5?' ':''}<br>Seri ${(data.probDraw*100).toFixed(1)}% EV ${data.evD.toFixed(1)}%<br>${data.tim2} ${(data.probBWin*100).toFixed(1)}% EV ${data.evB.toFixed(1)}%${data.evB>5?' ':''}</div>
+        <div style="background:#fdf2f8; padding:8px; border-radius:8px; border:1px solid #f9a8d4;"><small style="color:#be185d;">Model + EV</small><br>${data.tim1} ${(data.probAWin*100).toFixed(1)}% EV ${data.evA.toFixed(1)}%${data.evA>5?' 🔥':''}<br>Seri ${(data.probDraw*100).toFixed(1)}% EV ${data.evD.toFixed(1)}%<br>${data.tim2} ${(data.probBWin*100).toFixed(1)}% EV ${data.evB.toFixed(1)}%${data.evB>5?' 🔥':''}</div>
       </div>
       <div style="margin-top:8px; font-size:11px; display:flex; justify-content:space-between; color:#9d174d;"><span>Top: <strong style="color:#db2777;">${data.scoreMatrix[0].score}</strong> ${(data.scoreMatrix[0].prob*100).toFixed(1)}%</span><span>Over 2.5 ${(data.probOver25*100).toFixed(1)}%</span></div>
     </div>`;
@@ -556,3 +552,15 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   updateTambahButton();
   updateXgPreview(1);
 });
+
+// =========================================================
+// EXPOSE FUNGSI KE GLOBAL SCOPE
+// (Diperlukan karena type="module" membuat fungsi private)
+// =========================================================
+window.hasilkanPrediksi = hasilkanPrediksi;
+window.tambahPrediksi = tambahPrediksi;
+window.hapusPrediksi = hapusPrediksi;
+window.kembaliKeBeranda = kembaliKeBeranda;
+window.syncStats = syncStats;
+window.updateXgPreview = updateXgPreview;
+window.updateTambahButton = updateTambahButton;
