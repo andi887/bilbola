@@ -1,5 +1,7 @@
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, doc, getDocs, addDoc, deleteDoc, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { 
+  getFirestore, collection, doc, getDocs, addDoc, deleteDoc, query, orderBy, limit, serverTimestamp, setDoc, onSnapshot 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 let app = null;
@@ -23,6 +25,7 @@ export async function initFirestore() {
   }
 }
 
+/* -------------------- PREDICTION -------------------- */
 export async function savePrediction(predictionData) {
   if (!isConnected) {
     await initFirestore();
@@ -112,4 +115,31 @@ export async function getPredictionHistory(max) {
   const list = [];
   snap.forEach(function(d) { list.push({ id: d.id, ...d.data() }); });
   return list;
+}
+
+/* -------------------- LEADERBOARD -------------------- */
+export async function updateLeaderboard(userId, username, points, correct, predictions) {
+  if (!isConnected) await initFirestore();
+  try {
+    await setDoc(doc(db, "leaderboard", userId), {
+      username,
+      points,
+      correct,
+      predictions,
+      accuracy: predictions > 0 ? correct / predictions : 0,
+      updatedAt: serverTimestamp()
+    });
+    console.log("Leaderboard updated:", userId);
+  } catch (err) {
+    console.error("Gagal update leaderboard:", err);
+  }
+}
+
+export function listenLeaderboard(callback) {
+  if (!isConnected) initFirestore();
+  const q = query(collection(db, "leaderboard"), orderBy("points", "desc"));
+  onSnapshot(q, (snapshot) => {
+    const data = snapshot.docs.map(doc => doc.data());
+    callback(data);
+  });
 }
