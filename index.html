@@ -5,7 +5,7 @@
   <title>Situs Prediksi Bola</title>
   <link rel="stylesheet" href="css/style.css">
   <style>
-    /* Layout untuk parlay + klasemen */
+    /* Layout untuk parlay + klasemen + leaderboard */
     .container {
       display: flex;
       gap: 20px;
@@ -38,6 +38,24 @@
       margin: 2px 0;
       font-size: 14px;
     }
+    /* Styling tabel leaderboard */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      padding: 8px;
+      text-align: center;
+      border: 1px solid #ddd;
+    }
+    th {
+      background: #007BFF;
+      color: #fff;
+    }
+    tr:hover {
+      background: #f1f1f1;
+    }
   </style>
 </head>
 <body>
@@ -50,6 +68,7 @@
         <li><a href="pages/generator.html">Generator Prediksi</a></li>
         <li><a href="pages/parlay.html">Kalkulator Parlay</a></li>
         <li><a href="pages/rekap.html">Rekap Prediksi</a></li>
+        <li><a href="#leaderboard">Leaderboard Global</a></li>
       </ul>
     </nav>
   </header>
@@ -85,6 +104,22 @@
           <!-- Card klasemen akan diisi oleh klasemen.js -->
         </div>
       </div>
+
+      <!-- Leaderboard Global -->
+      <div class="box" id="leaderboard">
+        <h2>Leaderboard Global</h2>
+        <table id="leaderboardTable">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>User</th>
+              <th>Points</th>
+              <th>Accuracy</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </div>
   </main>
 
@@ -104,5 +139,6 @@
     }
   </script>
   <script src="js/klasemen.js"></script>
+  <script type="module" src="js/leaderboard.js"></script>
 </body>
 </html>
