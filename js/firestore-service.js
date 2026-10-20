@@ -56,13 +56,22 @@ export async function savePrediction(predictionData) {
       waktuISO: predictionData.waktuISO || new Date().toISOString(),
       createdAt: serverTimestamp(),
       source: "bilbola",
-      version: "v4.4-final"
+      version: "v4.5-fix-final"
     };
+    
+    // === LOG UNTUK DEBUG - HARUS DI SINI ===
+    console.log("📤 Mau simpan ke Firestore:", firebaseConfig.projectId, dataToSave);
+    
     const docRef = await addDoc(colRef, dataToSave);
-    console.log("Prediksi disimpan:", docRef.id);
+    
+    console.log("✅ SUKSES disimpan ke Firestore:", docRef.id);
     return docRef.id;
   } catch (err) {
-    console.error("Gagal simpan prediksi:", err);
+    console.error("❌ Gagal simpan prediksi:", err);
+    console.error("Detail error:", err.code, err.message);
+    if (err.code === 'permission-denied') {
+      console.error("➡️ FIX: Buka Firebase Console > Firestore > Security > ganti jadi allow read, write: if true;");
+    }
     throw err;
   }
 }
