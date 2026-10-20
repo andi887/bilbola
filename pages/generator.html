@@ -3,25 +3,48 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Generator Prediksi Bola - FIX Teams.json</title>
+  <title>Generator Prediksi Bola - FIX Firestore v4.4</title>
   <link rel="stylesheet" href="../css/generator.css">
-  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- [FIX] Firebase SDK Compat DIHAPUS - kita pakai Modular SDK via ES Module -->
+  <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+  <!-- FIX 1: Importmap harus ada sebelum module -->
+  <script type="importmap">
+  {
+    "imports": {
+      "firebase/app": "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js",
+      "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js",
+      "firebase-config": "../js/firebase-config.js",
+      "firebase-service": "../js/firebase-service.js"
+    }
+  }
+  </script>
 </head>
 <body>
   <header>
     <h2>Generator Prediksi Pertandingan Bola</h2>
+    <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+      <button onclick="kembaliKeBeranda()" style="background:#ffffff; color:#831843; border:1px solid #f9a8d4; padding:8px 14px; border-radius:10px; font-size:12px; cursor:pointer;"><i class="fa-solid fa-house"></i> Kembali ke Beranda</button>
+      <span id="matchCounter" style="background:#ffffff; border:1px solid #f9a8d4; padding:8px 12px; border-radius:10px; font-size:12px; color:#be185d;">1 pertandingan</span>
+      <span id="firebaseStatus" style="background:#fff3cd; border:1px solid #ffe69c; padding:8px 12px; border-radius:10px; font-size:11px; color:#664d03;">🔄 Menghubungkan Firestore...</span>
+    </div>
+    <div style="margin-top:8px; display:flex; gap:8px;">
+      <button id="btnTambahPrediksi" onclick="tambahPrediksi()" style="background:#ec4899; color:#fff; border:none; padding:8px 16px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer;"><i class="fa-solid fa-plus"></i> Tambah Prediksi (1/5)</button>
+      <button id="btnPrediksi" onclick="hasilkanPrediksi()" style="background:#be185d; color:#fff; border:none; padding:8px 16px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer;"><i class="fa-solid fa-calculator"></i> Hitung Semua</button>
+      <button onclick="loadHistoriFirestore()" style="background:#fff; border:1px solid #f9a8d4; padding:8px 14px; border-radius:10px; font-size:12px; cursor:pointer;"><i class="fa-solid fa-clock-rotate-left"></i> Histori Firestore</button>
+    </div>
   </header>
   <main>
-    <!-- Container asli - akan diisi oleh JS -->
-    <section id="hasilPrediksi"></section>
+    <div id="matchesContainer"></div>
+    <div id="hasilSemuaPrediksi"></div>
+    <div id="historiBox" style="display:none; margin:16px;"></div>
+    <div id="statusTeams" style="margin:16px; font-size:11px; color:#be185d;"></div>
+    <section id="hasilPrediksi" style="display:none;"></section>
     <section id="alurPrediksi">
       <h3>Alur Perhitungan Prediksi</h3>
       <img src="../assets/images/flowchart-prediksi.png" alt="Alur" style="max-width:100%;" onerror="this.style.display='none'">
     </section>
   </main>
-  <!-- [FIX] type="module" agar bisa import ES Module -->
+  <!-- FIX 2: Load sebagai MODULE, bukan script biasa -->
   <script type="module" src="../js/generator.js"></script>
 </body>
 </html>
